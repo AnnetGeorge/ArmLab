@@ -38,10 +38,19 @@ class StateMachine():
                 self.estop()
             if(self.next_state == "calibrate"):
                 self.calibrate()
+            if(self.next_state == "execute"):
+                self.execute()
                 
         if(self.current_state == "estop"):
             self.next_state = "estop"
             self.estop()  
+
+        if(self.current_state == "execute"):
+            if(self.next_state == "estop"):
+                self.estop()
+            if(self.next_state == "execute"):
+                self.execute()
+            
 
         if(self.current_state == "calibrate"):
             if(self.next_state == "idle"):
@@ -67,6 +76,21 @@ class StateMachine():
         self.current_state = "estop"
         self.rexarm.disable_torque()
         self.rexarm.get_feedback()
+    
+    def execute(self):
+        # these waypoints are from the lab doc
+        waypoints = [[ 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
+                    [-1.0,-0.8,-1.0,-0.5, -1.0],
+                    [-1.0, 0.8, 1.0, 0.5, 1.0],
+                    [1.0, -0.8,-1.0,-0.5, -1.0],
+                    [ 0.0, 0.0, 0.0, 0.0, 0.0]]
+        self.current_state = "execute"
+        for waypoint in waypoints:
+            self.rexarm.set_positions(waypoint)
+            self.rexarm.pause(2.0)
+        self.next_state = "idle"
+
         
     def calibrate(self):
         self.current_state = "calibrate"
