@@ -119,6 +119,12 @@ class Gui(QMainWindow):
         self.ui.btn_exec.clicked.connect(self.execute)
         self.ui.btnUser1.setText("Calibrate")
         self.ui.btnUser1.clicked.connect(partial(self.sm.set_next_state, "calibrate"))
+        self.ui.btnUser2.setText("Init Teaching")
+        self.ui.btnUser2.clicked.connect(partial(self.sm.set_next_state, "teaching"))
+        self.ui.btnUser3.setText("Add Waypoints")
+        self.ui.btnUser3.clicked.connect(partial(self.sm.addPoints))
+        
+        
         self.ui.sldrBase.valueChanged.connect(self.sliderChange)
         self.ui.sldrShoulder.valueChanged.connect(self.sliderChange)
         self.ui.sldrElbow.valueChanged.connect(self.sliderChange)

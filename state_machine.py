@@ -13,7 +13,7 @@ class StateMachine():
         self.status_message = "State: Idle"
         self.current_state = "idle"
         self.next_state = "idle"
-
+        self.waypoints = []
 
     def set_next_state(self, state):
         self.next_state = state
@@ -40,7 +40,10 @@ class StateMachine():
                 self.calibrate()
             if(self.next_state == "execute"):
                 self.execute()
-                
+            if (self.next_state == "teaching"):
+                self.waypoints = []
+                self.teaching()
+
         if(self.current_state == "estop"):
             self.next_state = "estop"
             self.estop()  
@@ -50,11 +53,18 @@ class StateMachine():
                 self.estop()
             if(self.next_state == "execute"):
                 self.execute()
-            
+            if(self.next_state == "idle"):
+                self.idle()
 
         if(self.current_state == "calibrate"):
             if(self.next_state == "idle"):
                 self.idle()
+
+        if (self.current_state == "teaching"):
+            if (self.next_state == "teaching"):
+                self.teaching()
+            if(self.next_state == "execute"):
+                self.execute()
                
 
     """Functions run for each state"""
@@ -78,20 +88,27 @@ class StateMachine():
         self.rexarm.get_feedback()
     
     def execute(self):
-        # these waypoints are from the lab doc
-        waypoints = [[ 0.0, 0.0, 0.0, 0.0, 0.0],
-                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
-                    [-1.0,-0.8,-1.0,-0.5, -1.0],
-                    [-1.0, 0.8, 1.0, 0.5, 1.0],
-                    [1.0, -0.8,-1.0,-0.5, -1.0],
-                    [ 0.0, 0.0, 0.0, 0.0, 0.0]]
+        self.status_message = "State: Executing waypoint path"
         self.current_state = "execute"
-        for waypoint in waypoints:
+        self.rexarm.enable_torque()
+        for waypoint in self.waypoints:
             self.rexarm.set_positions(waypoint)
             self.rexarm.pause(2.0)
         self.next_state = "idle"
 
+    def addPoints(self):
+        if self.current_state == "teaching":
+            self.waypoints.append(list(self.rexarm.joint_angles_fb))
         
+
+    def teaching(self):
+        self.status_message = "State: Teaching - Add waypoints using button 2"
+        self.current_state = "teaching"
+        self.rexarm.disable_torque()
+        self.rexarm.get_feedback()
+        self.next_state = "teaching"
+
+
     def calibrate(self):
         self.current_state = "calibrate"
         self.next_state = "idle"
