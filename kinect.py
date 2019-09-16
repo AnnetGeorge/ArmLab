@@ -110,8 +110,22 @@ class Kinect():
         """
         pts1 = coord1[0:3].astype(np.float32)
         pts2 = coord2[0:3].astype(np.float32)
-        print(cv2.getAffineTransform(pts1,pts2))
-        return cv2.getAffineTransform(pts1,pts2)
+
+        A = np.zeros((6,6))
+        B = np.zeros((6,1))
+        for i in range(3):
+            Arow_1 = [pts1[i][0], pts1[i][1],1,0,0,0]
+            Arow_2 = [0,0,0,pts1[i][0], pts1[i][1],1]
+            B[i*2] = pts2[i][0]
+            B[(i*2)+1] = pts2[i][1]
+            A[i*2] = Arow_1
+            A[(i*2)+1] = Arow_2
+
+        A_inv = np.linalg.inv(A)
+        return np.matmul(A_inv,B)
+
+        # print(cv2.getAffineTransform(pts1,pts2))
+        # return cv2.getAffineTransform(pts1,pts2)
 
 
     def registerDepthFrame(self, frame):
