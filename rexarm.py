@@ -3,7 +3,7 @@ import numpy as np
 from kinematics import *
 import time
 
-""" 
+"""
 TODO:
 
 Implement the missing functions

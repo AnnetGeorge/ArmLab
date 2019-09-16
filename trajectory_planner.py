@@ -17,22 +17,55 @@ class TrajectoryPlanner():
         self.dt = 0.05 # command rate
     
     def set_initial_wp(self):
-        pass
+        self.initial_wp = self.rexarm.get_positions()
 
     def set_final_wp(self, waypoint):
-        pass
+        self.final_wp = waypoint
 
     def go(self, max_speed = 2.5):
-        pass
+        T_exp = self.calc_time_from_waypoints(self.initial_wp, self.final_wp, max_speed)
+        startT = time.time()
+        curT = startT
+        running = True
+        spline = self.generate_cubic_spline(self.initial_wp, self.final_wp, T_exp)
+        while(running):
+            curT = time.time()
+            deltaT = curT - startT
+            joint_positions = [0.0] * self.num_joints
+            for i in range(self.num_joints):
+                A = spline[i]
+                joint_pos = A[0] + A[1]*deltaT + (A[2])*(deltaT**2) + (A[3])*(deltaT**3)
+                joint_positions[i] = joint_pos
+            self.rexarm.set_positions(joint_positions)
+            self.rexarm.pause(self.dt)
+            if(curT > (startT + T_exp)):
+                running = False
 
     def stop(self):
-        pass
+        self.rexarm.set_positions(self.rexarm.get_positions())
 
     def calc_time_from_waypoints(self, initial_wp, final_wp, max_speed):
-        pass
+        delta = np.array(final_wp) - np.array(initial_wp)
+        times = np.abs(delta / max_speed)
+        return np.amax(times)
 
     def generate_cubic_spline(self, initial_wp, final_wp, T):
-        pass
+        M = [[1, 0, 0, 0], [0, 1, 0, 0], [1, T, T**2, T**3], [0, 1, 2*T, 3*T**2]]
+        M_inv = np.linalg.inv(M)
+        A = np.zeros((self.num_joints, 4))
+        for i in range(self.num_joints):
+            q0 = initial_wp[i]
+            q1 = final_wp[i]
+            v0 = 0
+            vf = 0
+            b = np.transpose([q0, v0, q1, vf])
+            A_i = np.matmul(M_inv,b)
+            A[i] = A_i
+        return A
+
 
     def execute_plan(self, plan, look_ahead=8):
-        pass
+        for waypoint in plan:
+            self.set_initial_wp()
+            self.set_final_wp(waypoint)
+            self.go(max_speed=0.1)

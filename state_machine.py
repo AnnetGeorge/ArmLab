@@ -91,15 +91,15 @@ class StateMachine():
         self.status_message = "State: Executing waypoint path"
         self.current_state = "execute"
         self.rexarm.enable_torque()
-        for waypoint in self.waypoints:
-            self.rexarm.set_positions(waypoint)
-            self.rexarm.pause(2.0)
+        self.tp.execute_plan(self.waypoints)
+        #for waypoint in self.waypoints:
+        #    self.rexarm.set_positions(waypoint)
+        #    self.rexarm.pause(2.0)
         self.next_state = "idle"
 
     def addPoints(self):
         if self.current_state == "teaching":
             self.waypoints.append(list(self.rexarm.joint_angles_fb))
-        
 
     def teaching(self):
         self.status_message = "State: Teaching - Add waypoints using button 2"
@@ -142,6 +142,9 @@ class StateMachine():
         print(self.kinect.depth_click_points)
 
         """TODO Perform camera calibration here"""
-
+        self.kinect.depth2rgb_affine = \
+            self.kinect.getAffineTransform(self.kinect.rgb_click_points, \
+                self.kinect.depth_click_points)
+        print(self.kinect.depth2rgb_affine)
         self.status_message = "Calibration - Completed Calibration"
         time.sleep(1)
