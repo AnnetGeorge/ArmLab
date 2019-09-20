@@ -121,8 +121,12 @@ class Kinect():
             A[i*2] = Arow_1
             A[(i*2)+1] = Arow_2
 
-        A_inv = np.linalg.inv(A)
-        return np.matmul(A_inv,B)
+        # A_inv = np.linalg.inv(A)
+        AtA = np.matmul(A.T, A)
+        AtA_inv = np.linalg.inv(AtA)
+        pseudo_invA = np.matmul(AtA_inv,A.T)
+
+        return np.matmul(pseudo_invA,B)
 
         # print(cv2.getAffineTransform(pts1,pts2))
         # return cv2.getAffineTransform(pts1,pts2)

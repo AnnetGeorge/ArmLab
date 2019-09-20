@@ -28,8 +28,27 @@ class StateMachine():
                 self.idle()                
             if(self.next_state == "estop"):
                 self.estop()
+            if(self.next_state == "limp"):
+                self.current_state = "limp"
 
         if(self.current_state == "idle"):
+            if(self.next_state == "manual"):
+                self.manual()
+            if(self.next_state == "idle"):
+                self.idle()
+            if(self.next_state == "estop"):
+                self.estop()
+            if(self.next_state == "calibrate"):
+                self.calibrate()
+            if(self.next_state == "execute"):
+                self.execute()
+            if(self.next_state == "limp"):
+                self.current_state = "limp"
+            if (self.next_state == "teaching"):
+                self.waypoints = []
+                self.teaching()
+
+        if(self.current_state == "limp"):
             if(self.next_state == "manual"):
                 self.manual()
             if(self.next_state == "idle"):
@@ -43,6 +62,8 @@ class StateMachine():
             if (self.next_state == "teaching"):
                 self.waypoints = []
                 self.teaching()
+            self.rexarm.disable_torque()
+            self.status_message = "State: Limp(idle) - motors have been disbled"
 
         if(self.current_state == "estop"):
             self.next_state = "estop"
@@ -55,16 +76,22 @@ class StateMachine():
                 self.execute()
             if(self.next_state == "idle"):
                 self.idle()
+            if(self.next_state == "limp"):
+                self.current_state = "limp"
 
         if(self.current_state == "calibrate"):
             if(self.next_state == "idle"):
                 self.idle()
+            if(self.next_state == "limp"):
+                self.current_state = "limp"
 
         if (self.current_state == "teaching"):
             if (self.next_state == "teaching"):
                 self.teaching()
             if(self.next_state == "execute"):
                 self.execute()
+            if(self.next_state == "limp"):
+                self.current_state = "limp"
                
 
     """Functions run for each state"""

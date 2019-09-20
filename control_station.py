@@ -123,6 +123,9 @@ class Gui(QMainWindow):
         self.ui.btnUser2.clicked.connect(partial(self.sm.set_next_state, "teaching"))
         self.ui.btnUser3.setText("Add Waypoints")
         self.ui.btnUser3.clicked.connect(partial(self.sm.addPoints))
+
+        self.ui.btnUser3.setText("Go Limp")
+        self.ui.btnUser3.clicked.connect(partial(self.sm.set_next_state, "limp"))
         
         
         self.ui.sldrBase.valueChanged.connect(self.sliderChange)
