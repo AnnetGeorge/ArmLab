@@ -175,4 +175,6 @@ class Rexarm():
         Q = [R2D * q_i for q_i in Q]
         b=np.array(Q)
         worldf=np.concatenate((worldf,b))
-        return list (worldf)
+        a=list (worldf)
+        del a[3]
+        return a

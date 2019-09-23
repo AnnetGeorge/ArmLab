@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import cv2
 
 """
 TODO: Add states and state functions to this class
@@ -170,7 +171,17 @@ class StateMachine():
         self.kinect.depth2rgb_affine = \
             np.linalg.inv(self.kinect.getAffineTransform(self.kinect.rgb_click_points, \
                 self.kinect.depth_click_points))
+
+        model_points = np.array([[-305,-305,0],[-305,305,0],[305,305,0],[305,-305,0],[0,0,128.75]])
+        image_points = self.kinect.rgb_click_points
+        (success, rot_vec, trans_vec) = cv2.solvePnP(model_points, \
+                        image_points,\
+                    self.kinect.loadCameraCalibration(),\
+                    None,\
+                    flags=cv2.cv2.SOLVEPNP_ITERATIVE)
+        print((success, rot_vec, trans_vec))
+
+
         self.kinect.kinectCalibrated = True
-        print(self.kinect.depth2rgb_affine)
         self.status_message = "Calibration - Completed Calibration"
         time.sleep(1)

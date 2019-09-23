@@ -147,6 +147,8 @@ class Kinect():
         TODO:
         Using an Affine transformation, transform the depth frame to match the RGB frame
         """
+
+
         return self.applyAffine(frame, self.depth2rgb_affine)
 
     def loadCameraCalibration(self):
