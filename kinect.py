@@ -7,6 +7,7 @@ class Kinect():
     def __init__(self):
         self.currentVideoFrame = np.array([])
         self.currentDepthFrame = np.array([])
+        self.cameraIntrinsic = self.loadCameraCalibration()
         if(freenect.sync_get_depth() == None):
             self.kinectConnected = False
         else:
@@ -108,8 +109,8 @@ class Kinect():
         TODO: Rewrite this function to take in an arbitrary number of coordinates and 
         find the transform without using cv2 functions
         """
-        pts1 = coord1[0:3].astype(np.float32)
-        pts2 = coord2[0:3].astype(np.float32)
+        pts1 = coord1[::].astype(np.float32)
+        pts2 = coord2[::].astype(np.float32)
 
         A = np.zeros((6,6))
         B = np.zeros((6,1))
@@ -125,26 +126,34 @@ class Kinect():
         AtA = np.matmul(A.T, A)
         AtA_inv = np.linalg.inv(AtA)
         pseudo_invA = np.matmul(AtA_inv,A.T)
-
-        return np.matmul(pseudo_invA,B)
-
-        # print(cv2.getAffineTransform(pts1,pts2))
-        # return cv2.getAffineTransform(pts1,pts2)
-
+        result = np.matmul(pseudo_invA,B)
+        return [[result[0][0],result[1][0],result[2][0]],[result[3][0],result[4][0],result[5][0]],[0,0,1]]
+    
+    def applyAffine(self, frame, affineMatrix):
+        input_shape = frame.shape
+        result = np.zeros(input_shape)
+        for i in range(input_shape[0]):
+            for j in range(input_shape[1]):
+                source_mat = np.array([i,j,1]).T
+                dest_mat = np.matmul(source_mat, affineMatrix)
+                dest_i = int(dest_mat[0])
+                dest_j = int(dest_mat[1])
+                if(dest_i >= 0 and dest_i < input_shape[0] and dest_j >= 0 and dest_j < input_shape[1]):
+                    result[dest_i][dest_j] = frame[i][j]
+        return result
 
     def registerDepthFrame(self, frame):
         """
         TODO:
         Using an Affine transformation, transform the depth frame to match the RGB frame
         """
-        pass
+        return self.applyAffine(frame, self.depth2rgb_affine)
 
     def loadCameraCalibration(self):
         """
-        TODO:
-        Load camera intrinsic matrix from file.
+        Load camera intrinsic matrix from file
         """
-        pass
+        return np.loadtxt("./util/intrinsic_mat.cfg")
     
     def blockDetector(self):
         """
