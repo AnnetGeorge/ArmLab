@@ -139,7 +139,6 @@ class StateMachine():
     def calibrate(self):
         self.current_state = "calibrate"
         self.next_state = "idle"
-        self.tp.go(max_speed=2.0)
         location_strings = ["lower left corner of board",
                             "upper left corner of board",
                             "upper right corner of board",
@@ -153,7 +152,7 @@ class StateMachine():
                 if(self.kinect.new_click == True):
                     self.kinect.rgb_click_points[i] = self.kinect.last_click.copy()
                     i = i + 1
-                    self.kinect.new_click = False        
+                    self.kinect.new_click = False
         
         i = 0
         for j in range(5):
@@ -165,13 +164,13 @@ class StateMachine():
                     i = i + 1
                     self.kinect.new_click = False
    
-        print(self.kinect.rgb_click_points)
-        print(self.kinect.depth_click_points)
+        
 
         """TODO Perform camera calibration here"""
         self.kinect.depth2rgb_affine = \
-            self.kinect.getAffineTransform(self.kinect.rgb_click_points, \
-                self.kinect.depth_click_points)
+            np.linalg.inv(self.kinect.getAffineTransform(self.kinect.rgb_click_points, \
+                self.kinect.depth_click_points))
+        self.kinect.kinectCalibrated = True
         print(self.kinect.depth2rgb_affine)
         self.status_message = "Calibration - Completed Calibration"
         time.sleep(1)
