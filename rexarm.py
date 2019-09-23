@@ -164,5 +164,15 @@ class Rexarm():
                 joint_angles[i] = self.angle_limits[i][1]
 
     def get_wrist_pose(self):
-        """TODO"""
-        return [0,0,0,0,0,0]
+        FK= FK_dh(self.joint_angles_fb,4)
+        H= FK[0]
+        Q=list(FK[1])
+        P=[0,0,0,1]
+        worldf = np.matmul(H,P)
+        # H2 = FK_dh(self.joint_angles_fb,2)[0]
+        # w = np.matmul(H2,P)
+        # print w
+        Q = [R2D * q_i for q_i in Q]
+        b=np.array(Q)
+        worldf=np.concatenate((worldf,b))
+        return list (worldf)
