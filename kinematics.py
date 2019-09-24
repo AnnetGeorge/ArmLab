@@ -11,10 +11,13 @@ There are some functions to start with, you may need to implement a few more
 def DH(joint_angles):
     # Dh = [a alpha d theta]
     Dh = np.zeros((len(joint_angles),4))
+    d6 = 100 # need to check
     Dh = [[0,-np.pi/2,117.75,joint_angles[0]],
           [98.84,0,0,joint_angles[1]-np.pi/2],
           [0,np.pi/2,0,joint_angles[2]+np.pi/2],
-          [0,-np.pi/2,113.1,joint_angles[3]]
+          [0,-np.pi/2,113.1,joint_angles[3]],
+          [0,np.pi/2,0,joint_angles[4]],
+          [0,np.pi/2,d6,joint_angles[5]]
           ]
 
     return Dh
@@ -76,20 +79,6 @@ def FK_pox(joint_angles):
     pass
 
 
-
-
-def IK(pose):
-    """
-    TODO: implement this function
-
-    Calculate inverse kinematics for rexarm
-
-    return the required joint angles
-
-    """
-    pass
-
-
 def get_euler_angles_from_T(T):
     """
     TODO: implement this function
@@ -105,15 +94,19 @@ def get_euler_angles_from_T(T):
         phi = 0
         psi = np.arctan2(T[0][1],-T[0][0])
     else:
-        phi = np.arctan2(T[1][2]/np.sin(theta),T[0][2]/np.sin(theta))
-        psi = np.arctan2(T[2][1]/np.sin(theta),-T[2][0]/np.sin(theta))
+        phi = np.arctan2(T[1][2],T[0][2])
+        psi = np.arctan2(T[2][1],-T[2][0])
     toReturn = []
     toReturn.append(phi)
     toReturn.append(theta)
     toReturn.append(psi)
     return toReturn
 
-print FK_dh([1.22,np.pi/3,0.2,0.3,0,4],4)[0]
+# Q = list(FK_dh([0,0,0,0,0],4)[1])
+# R2D = 180.0/np.pi
+# Q = [R2D * q_i for q_i in Q]
+# print Q
+
 def get_pose_from_T(T):
     """
     TODO: implement this function
@@ -123,8 +116,64 @@ def get_pose_from_T(T):
     """
     pass
 
+def IK(pose):
+    
+    """
+    TODO: implement this function
 
+    Calculate inverse kinematics for rexarm
 
+    return the required joint angles
+
+    """
+    #pose = R06 = R
+    d6 = 100 # gripper length
+    H = pose
+    R = np.zeros((3,3))
+    for i in range(3):
+        for j in range(3):
+            R[i][j] = H[i][j]
+    o=[H[i][3] for i in range(3)] # desire postion
+    print R
+    print o
+    # o06 =np.matmul(H,[0,0,0,1])
+    o04 = o - np.matmul(R,[0,0,d6])
+    x4 = o04[0]
+    y4 = o04[1]
+    z4 = o04[2]
+    t11 = np.arctan2(y4,x4) #yc/xc
+    t22 = np.pi+np.arctan2(y4,x4)
+
+    ""
+    L2 = 98.84
+    L3 = 113.1
+    t31 = np.arccos((x4**2+y4**2-L2**2-L3**2)/(2*L2*L3))
+    t32 = -np.arccos((x4**2+y4**2-L2**2-L3**2)/(2*L2*L3))
+
+    ""
+    gamma1 = np.arctan2(L3*np.sin(t31),L2+L3*np.cos(t31))
+    gamma2 = np.arctan2(L3*np.sin(t32),L2+L3*np.cos(t32))
+    t21 = -np.arctan2(z4-117.75,x4)+gamma1
+    t22 = -np.arctan2(z4-117.75,x4)+gamma2
+
+    angles_1 = [t11,t21,t31,0,0,0]
+    H03 = FK_dh(angles_1,3)[0]
+    R03 = np.zeros((3,3))
+    for i in range(3):
+        for j in range(3):
+            R03[i][j] = H03[i][j]
+    R36 = np.matmul(np.linalg.inv(R03),R)
+    t46 = get_euler_angles_from_T(R36)
+    print t46
+    t41 = t46[0]
+    t51 = t46[1]
+    t61 = t46[2]
+    IK_angle = [t11,t21,t31,t41,t51,t61]
+    return IK_angle
+cos=np.cos
+sin=np.sin
+A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
+print IK(A)
 
 def to_s_matrix(w,v):
     """
