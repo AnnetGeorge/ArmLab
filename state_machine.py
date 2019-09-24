@@ -172,16 +172,28 @@ class StateMachine():
             np.linalg.inv(self.kinect.getAffineTransform(self.kinect.rgb_click_points, \
                 self.kinect.depth_click_points))
 
-        model_points = np.array([[-305,-305,0],[-305,305,0],[305,305,0],[305,-305,0],[0,0,128.75]])
-        image_points = self.kinect.rgb_click_points
-        (success, rot_vec, trans_vec) = cv2.solvePnP(model_points, \
+        model_points = np.array([\
+            [-305.0,-305.0,0.0],\
+                [-305.0,305.0,0.0],\
+                    [305.0,305.0,0.0],\
+                        [305.0,-305.0,0.0],\
+                            [0.0,0.0,128.75]])
+
+        image_points = np.float32(self.kinect.rgb_click_points[0:4])
+
+        (success, rot_vec, trans_vec) = cv2.solvePnP(model_points[0:4], \
                         image_points,\
                     self.kinect.loadCameraCalibration(),\
-                    None,\
-                    flags=cv2.cv2.SOLVEPNP_ITERATIVE)
+                    None)#,\
+                    #flags=cv2.cv2.SOLVEPNP_ITERATIVE)
         print((success, rot_vec, trans_vec))
+        if(success):
+            self.kinect.extrinsicTranslation = trans_vec
+            self.kinect.extrinsicRotation = rot_vec
+            self.kinect.kinectCalibrated = True
+            self.status_message = "Calibration - Completed Calibration"
+            time.sleep(1)
+        else:
+            self.status_message = "Calibration - failed! See terminal for error msg."
 
-
-        self.kinect.kinectCalibrated = True
-        self.status_message = "Calibration - Completed Calibration"
-        time.sleep(1)
+        
