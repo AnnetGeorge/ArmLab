@@ -169,10 +169,12 @@ def IK(pose):
     t51 = t46[1]
     t61 = t46[2]
     IK_angle = [t11,t21,t31,t41,t51,t61]
+    # IK_angle = [i*180/np.pi for i in IK_angle]
     return IK_angle
 cos=np.cos
 sin=np.sin
 A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
+B = np.array([[1,0,0,100],[0,1,0,100],[0,0,1,200],[0,0,0,1]])
 print IK(A)
 
 def to_s_matrix(w,v):

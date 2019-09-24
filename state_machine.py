@@ -14,6 +14,8 @@ class StateMachine():
         self.current_state = "idle"
         self.next_state = "idle"
         self.waypoints = []
+        self.IKtest = []
+        
 
     def set_next_state(self, state):
         self.next_state = state
@@ -118,7 +120,11 @@ class StateMachine():
         self.status_message = "State: Executing waypoint path"
         self.current_state = "execute"
         self.rexarm.enable_torque()
-        self.tp.execute_plan(self.waypoints)
+        self.A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
+        self.B = np.array([[1,0,0,100],[0,1,0,100],[0,0,1,200],[0,0,0,1]])
+        self.IKtest = self.rexarm.IK(A)
+        self.tp.execute_plan(self.IKtest)
+        # self.tp.execute_plan(self.waypoints)
         #for waypoint in self.waypoints:
         #    self.rexarm.set_positions(waypoint)
         #    self.rexarm.pause(2.0)
