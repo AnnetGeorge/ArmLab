@@ -8,6 +8,8 @@ class Kinect():
         self.currentVideoFrame = np.array([])
         self.currentDepthFrame = np.array([])
         self.cameraIntrinsic = self.loadCameraCalibration()
+        self.extrinsicTranslation = None
+        self.extrinsicRotation = None
         if(freenect.sync_get_depth() == None):
             self.kinectConnected = False
         else:
@@ -144,11 +146,8 @@ class Kinect():
 
     def registerDepthFrame(self, frame):
         """
-        TODO:
-        Using an Affine transformation, transform the depth frame to match the RGB frame
+        Using an Affine transformation, transforms the depth frame to match the RGB frame
         """
-
-
         return self.applyAffine(frame, self.depth2rgb_affine)
 
     def loadCameraCalibration(self):
