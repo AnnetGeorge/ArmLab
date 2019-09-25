@@ -17,7 +17,7 @@ def DH(joint_angles):
           [0,np.pi/2,0,joint_angles[2]+np.pi/2],
           [0,-np.pi/2,113.1,joint_angles[3]],
           [0,np.pi/2,0,joint_angles[4]],
-          [0,np.pi/2,d6,joint_angles[5]]
+        #   [0,np.pi/2,d6,joint_angles[5]]
           ]
 
     return Dh
@@ -127,7 +127,7 @@ def IK(pose):
 
     """
     #pose = R06 = R
-    d6 = 100 # gripper length
+    d6 = 0 # gripper length
     H = pose
     R = np.zeros((3,3))
     for i in range(3):
@@ -142,19 +142,31 @@ def IK(pose):
     y4 = o04[1]
     z4 = o04[2]
     t11 = np.arctan2(y4,x4) #yc/xc
-    t22 = np.pi+np.arctan2(y4,x4)
+    t12 = np.pi+np.arctan2(y4,x4)
 
     ""
     L2 = 98.84
     L3 = 113.1
     t31 = np.arccos((x4**2+y4**2-L2**2-L3**2)/(2*L2*L3))
     t32 = -np.arccos((x4**2+y4**2-L2**2-L3**2)/(2*L2*L3))
+    print "theta 3"
+    print t31*180/np.pi,t32*180/np.pi
 
     ""
     gamma1 = np.arctan2(L3*np.sin(t31),L2+L3*np.cos(t31))
     gamma2 = np.arctan2(L3*np.sin(t32),L2+L3*np.cos(t32))
+    print "gamma1"
+    print gamma1*180/np.pi
+    print "gamma2"
+    print gamma2*180/np.pi
+
     t21 = -np.arctan2(z4-117.75,x4)+gamma1
     t22 = -np.arctan2(z4-117.75,x4)+gamma2
+    print 'angle'
+    print np.arctan2(z4-117.75,x4)*180/np.pi    
+    print z4
+    print "theta 2"
+    print t21*180/np.pi,t22*180/np.pi
 
     angles_1 = [t11,t21,t31,0,0,0]
     H03 = FK_dh(angles_1,3)[0]
@@ -162,20 +174,29 @@ def IK(pose):
     for i in range(3):
         for j in range(3):
             R03[i][j] = H03[i][j]
+    # print "H03"
+    # print np.matmul(H03,[0,0,0,1])
     R36 = np.matmul(np.linalg.inv(R03),R)
     t46 = get_euler_angles_from_T(R36)
-    print t46
+    # print t46
     t41 = t46[0]
     t51 = t46[1]
     t61 = t46[2]
-    IK_angle = [t11,t21,t31,t41,t51,t61]
-    # IK_angle = [i*180/np.pi for i in IK_angle]
+    # IK_angle = [[t11,t21,t31,t41,t51]]
+    IK_angle = [t11,t21,t31,t41,-np.pi/2]
+    De = [i*180/np.pi for i in IK_angle]
+    print De
+    IK_angle = [[t11,t21,t31,t41,-np.pi/2]]
     return IK_angle
 cos=np.cos
 sin=np.sin
-A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
-B = np.array([[1,0,0,100],[0,1,0,100],[0,0,1,200],[0,0,0,1]])
+# A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
+# B = np.array([[1,0,0,100],[0,1,0,100],[0,0,1,200],[0,0,0,1]])
+A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
 print IK(A)
+# B=IK(A)
+# B=[i*180/np.pi for i in B]
+# print B
 
 def to_s_matrix(w,v):
     """

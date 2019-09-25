@@ -1,6 +1,6 @@
 import time
 import numpy as np
-
+import kinematics as kp
 """
 TODO: Add states and state functions to this class
         to implement all of the required logic for the armlab
@@ -120,9 +120,12 @@ class StateMachine():
         self.status_message = "State: Executing waypoint path"
         self.current_state = "execute"
         self.rexarm.enable_torque()
-        self.A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
-        self.B = np.array([[1,0,0,100],[0,1,0,100],[0,0,1,200],[0,0,0,1]])
-        self.IKtest = self.rexarm.IK(A)
+        cos = np.cos
+        sin = np.sin
+        self.A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
+        self.B = np.array([[1,0,0,150],[0,1,0,150],[0,0,1,115],[0,0,0,1]])
+        self.IKtest = kp.IK(self.A)
+        print self.IKtest
         self.tp.execute_plan(self.IKtest)
         # self.tp.execute_plan(self.waypoints)
         #for waypoint in self.waypoints:

@@ -1,8 +1,7 @@
 #rexarm.py
 import numpy as np
-from kinematics import *
 import time
-
+from kinematics import *
 """
 TODO:
 
@@ -119,6 +118,7 @@ class Rexarm():
     def get_positions(self):
         for i,joint in enumerate(self.joints):
             self.joint_angles_fb[i] = joint.get_position()
+        # print self.joint_angles_fb
         return self.joint_angles_fb
 
     def get_speeds(self):
@@ -164,7 +164,7 @@ class Rexarm():
                 joint_angles[i] = self.angle_limits[i][1]
 
     def get_wrist_pose(self):
-        FK= FK_dh(self.joint_angles_fb,4)
+        FK= FK_dh(self.joint_angles_fb,5)
         H= FK[0]
         Q=list(FK[1])
         P=[0,0,0,1]
