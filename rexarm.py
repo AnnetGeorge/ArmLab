@@ -18,8 +18,8 @@ class Rexarm():
     def __init__(self, joints, gripper):
         self.joints = joints
         self.gripper = gripper
-        self.gripper_open_pos = np.deg2rad(-60.0)
-        self.gripper_closed_pos = np.deg2rad(30.0)
+        self.gripper_open_pos = np.deg2rad(90.0)
+        self.gripper_closed_pos = np.deg2rad(-75.0)
         self.gripper_state = True
         self.estop = False
         """TODO: Find the physical angle limits of the Rexarm. Remember to keep track of this if you include more motors"""
@@ -28,7 +28,8 @@ class Rexarm():
                             [-127, 125.0],
                             [-121, 106.0],
                             [-140, 140.0],
-                            [-133, 132.0],], dtype=np.float)*D2R
+                            [-133, 132.0],
+                            [-180, 179.99]], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
@@ -55,18 +56,18 @@ class Rexarm():
             self.close_gripper()
 
     def open_gripper(self):
-        """ TODO """
+        self.gripper.set_position(self.gripper_open_pos)
         self.gripper_state = False
-        pass
 
     def close_gripper(self):
-        """ TODO """
+        self.gripper.set_position(self.gripper_closed_pos)
         self.gripper_state = True
-        pass
 
     def toggle_gripper(self):
-        """ TODO """
-        pass
+        if self.gripper_state == True:
+            self.open_gripper()
+        else:
+            self.close_gripper()
 
     def set_positions(self, joint_angles, update_now = True):
         self.clamp(joint_angles)

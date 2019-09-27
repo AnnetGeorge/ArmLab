@@ -136,6 +136,7 @@ class StateMachine():
     def addPoints(self):
         if self.current_state == "teaching":
             self.waypoints.append(list(self.rexarm.joint_angles_fb))
+        print(self.waypoints)
 
     def teaching(self):
         self.status_message = "State: Teaching - Add waypoints using button 2"

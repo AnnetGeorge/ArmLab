@@ -22,7 +22,7 @@ class TrajectoryPlanner():
     def set_final_wp(self, waypoint):
         self.final_wp = waypoint
 
-    def go(self, max_speed = 2.5):
+    def go(self, max_speed = 1.2):
         T_exp = self.calc_time_from_waypoints(self.initial_wp, self.final_wp, max_speed)
         startT = time.time()
         curT = startT

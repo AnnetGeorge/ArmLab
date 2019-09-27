@@ -22,20 +22,28 @@ shld = DXL_MX(port_num, 2)
 elbw = DXL_MX(port_num, 3)
 wrst = DXL_AX(port_num, 4)
 wrst2 = DXL_AX(port_num, 5)
+wrst3 = DXL_XL(port_num, 6)
+gripper = DXL_XL(port_num, 7)
 
-rexarm = Rexarm((base,shld,elbw,wrst,wrst2), 0)
+
+rexarm = Rexarm((base,shld,elbw,wrst,wrst2,wrst3), gripper)
 rexarm.set_speeds_normalized_global(0.15)
 rexarm.initialize()
-#rexarm.open_gripper()
+rexarm.close_gripper()
 tp = TrajectoryPlanner(rexarm)
 
 time.sleep(1)
 
-waypoints = [[1.0,0.8,1.0,1.0,1.0],
-             [-1.0,-0.8,-1.0,-1.0,-1.0],
-             [-1.0,0.8,1.0,1.0,1.0],
-             [1.0,-0.8,-1.0,-1.0,-1.0],
-             [0.0,0.0,0.0,0.0,0.0]]
+# waypoints = [[1.0,0.8,1.0,1.0,1.0],
+#              [-1.0,-0.8,-1.0,-1.0,-1.0],
+#              [-1.0,0.8,1.0,1.0,1.0],
+#              [1.0,-0.8,-1.0,-1.0,-1.0],
+#              [0.0,0.0,0.0,0.0,0.0]]
+# 
+# waypoints = [[1.0,0.0,0.0,0.0,0.0,0.0]]
+#
+waypoints = [[-0.81, 1.07, 1.48, -0.00, -1.01, 0.0]]
+
 
 for wp in waypoints:
     goal_wp = wp
@@ -43,7 +51,7 @@ for wp in waypoints:
     tp.set_final_wp(goal_wp)
     tp.go()
     
-    #rexarm.toggle_gripper()
+    rexarm.toggle_gripper()
 
 time.sleep(1)
 

@@ -104,6 +104,8 @@ class Gui(QMainWindow):
         elbw = DXL_MX(port_num, 3)
         wrst = DXL_AX(port_num, 4)
         wrst2 = DXL_AX(port_num, 5)
+        # wrst3 = DXL_XL(port_num, 6)
+        # gripper = DXL_XL(port_num, 7)
 
         """Objects Using Other Classes"""
         self.kinect = Kinect()
@@ -132,7 +134,6 @@ class Gui(QMainWindow):
         self.ui.sldrShoulder.valueChanged.connect(self.sliderChange)
         self.ui.sldrElbow.valueChanged.connect(self.sliderChange)
         self.ui.sldrWrist.valueChanged.connect(self.sliderChange)
-
         self.ui.sldrWrist2.valueChanged.connect(self.sliderChange)
 
         self.ui.sldrMaxTorque.valueChanged.connect(self.sliderChange)
