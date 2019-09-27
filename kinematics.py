@@ -135,40 +135,71 @@ def IK(pose):
             R[i][j] = H[i][j]
     o=[H[i][3] for i in range(3)] # desire postion
     print R
-    print o
+    # print o
     # o06 =np.matmul(H,[0,0,0,1])
     o04 = o - np.matmul(R,[0,0,d6])
+    print 'o04',o04
     x4 = o04[0]
     y4 = o04[1]
     z4 = o04[2]
     t11 = np.arctan2(y4,x4) #yc/xc
     t12 = np.pi+np.arctan2(y4,x4)
-
-    ""
+    "cal theta 3 2 sols"
+    o01z = 117.75
+    do01o04 = np.sqrt(x4**2+y4**2+(z4-o01z)**2) #distance o01 o04
+    print 'd14',do01o04
+   
     L2 = 98.84
     L3 = 113.1
-    t31 = np.arccos((x4**2+y4**2-L2**2-L3**2)/(2*L2*L3))
-    t32 = -np.arccos((x4**2+y4**2-L2**2-L3**2)/(2*L2*L3))
-    print "theta 3"
-    print t31*180/np.pi,t32*180/np.pi
+    fix31 = (do01o04**2-L2**2-L3**2)/(2*L2*L3)
+    print 'fix',fix31
+    if fix31 >= 1.0:
+        fix31 = 1.0
+    elif fix31 <=-1.0:
+        fix31 = -1.0
+    print fix31
+    t31 = np.arccos(fix31)
+    t32 = -np.arccos(fix31)
+    print "t31",t31*180/np.pi,"t32",t32*180/np.pi
+    # convert to real t31 *-1
+    t31r = -np.arccos(fix31)
+    t32r = +np.arccos(fix31)
+    print "t31r",t31r*180/np.pi,t32r*180/np.pi
 
-    ""
-    gamma1 = np.arctan2(L3*np.sin(t31),L2+L3*np.cos(t31))
-    gamma2 = np.arctan2(L3*np.sin(t32),L2+L3*np.cos(t32))
-    print "gamma1"
-    print gamma1*180/np.pi
-    print "gamma2"
-    print gamma2*180/np.pi
+    "cal theta 2 sol depends on theta3 2 sols"
+    #theta 2 = gamma - psi
+    angleslink = [t11,0,0,0,0]
+    H01 = FK_dh(angleslink,1)[0]
+    # print 'H01',H01
+    o14 = np.append (o04,[1.0])
+    o14 = np.matmul(np.linalg.inv(H01),o14)
+    print 'o14',o14
+    gamma = np.arctan2(o14[1],o14[0]) 
+    print "gamma",gamma*180/np.pi
+    fixpsi = (L2**2+do01o04**2-L3**2)/(2*L2*do01o04)
+    print "fixpsi",fixpsi
+    if fixpsi >= 1.0:
+        fixpsi = 1.0
+    elif fixpsi <=-1.0:
+        fixpsi = -1.0
+    psi = np.arccos(fixpsi)
+    print "psi",psi*180/np.pi
+    if t31 < 0.0:
+        t21 = gamma-psi #check!~
+        t21r = 0.5*np.pi-t21
+        print "t21",t21*180/np.pi,"t21r",t21r*180/np.pi
+    elif t31 >= 0.0:
+        t22 = gamma+psi
+        t21r = 0.5*np.pi-t22
+        print "t22",t22*180/np.pi,"t21r",t21r*180/np.pi
+    
+    # print 'angle'
+    # print np.arctan2(z4-117.75,x4)*180/np.pi    
+    # print z4
+    # print "theta 2"
+    # print t21*180/np.pi,t22*180/np.pi
 
-    t21 = -np.arctan2(z4-117.75,x4)+gamma1
-    t22 = -np.arctan2(z4-117.75,x4)+gamma2
-    print 'angle'
-    print np.arctan2(z4-117.75,x4)*180/np.pi    
-    print z4
-    print "theta 2"
-    print t21*180/np.pi,t22*180/np.pi
-
-    angles_1 = [t11,t21,t31,0,0,0]
+    angles_1 = [t11,t21r,t31r,0,0,0]
     H03 = FK_dh(angles_1,3)[0]
     R03 = np.zeros((3,3))
     for i in range(3):
@@ -183,16 +214,16 @@ def IK(pose):
     t51 = t46[1]
     t61 = t46[2]
     # IK_angle = [[t11,t21,t31,t41,t51]]
-    IK_angle = [t11,t21,t31,t41,-np.pi/2]
+    IK_angle = [t11,t21r,t31r,t41,-np.pi/2]
     De = [i*180/np.pi for i in IK_angle]
     print De
-    IK_angle = [[t11,t21,t31,t41,-np.pi/2]]
+    IK_angle = [[t11,t21r,t31r,t41,-np.pi/2]]
     return IK_angle
 cos=np.cos
 sin=np.sin
 # A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
 # B = np.array([[1,0,0,100],[0,1,0,100],[0,0,1,200],[0,0,0,1]])
-A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
+A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),260],[0,0,0,1]])
 print IK(A)
 # B=IK(A)
 # B=[i*180/np.pi for i in B]
