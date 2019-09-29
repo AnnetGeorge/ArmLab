@@ -42,7 +42,7 @@ time.sleep(1)
 # 
 # waypoints = [[1.0,0.0,0.0,0.0,0.0,0.0]]
 #
-waypoints = [[-0.81, 1.07, 1.48, -0.00, -1.01, 0.0]]
+waypoints = [[0, 1.07, 1, 0.3, -0.5, 0.4]]
 
 
 for wp in waypoints:

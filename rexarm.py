@@ -29,7 +29,7 @@ class Rexarm():
                             [-121, 106.0],
                             [-140, 140.0],
                             [-133, 132.0],
-                            [-180, 179.99]], dtype=np.float)*D2R
+                            [-149, 150.0]], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
@@ -165,7 +165,7 @@ class Rexarm():
                 joint_angles[i] = self.angle_limits[i][1]
 
     def get_wrist_pose(self):
-        FK= FK_dh(self.joint_angles_fb,5)
+        FK= FK_dh(self.joint_angles_fb,6)
         H= FK[0]
         Q=list(FK[1])
         P=[0,0,0,1]
