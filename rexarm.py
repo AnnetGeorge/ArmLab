@@ -18,8 +18,8 @@ class Rexarm():
     def __init__(self, joints, gripper):
         self.joints = joints
         self.gripper = gripper
-        self.gripper_open_pos = np.deg2rad(-60.0)
-        self.gripper_closed_pos = np.deg2rad(30.0)
+        self.gripper_open_pos = np.deg2rad(90.0)
+        self.gripper_closed_pos = np.deg2rad(-75.0)
         self.gripper_state = True
         self.estop = False
         """TODO: Find the physical angle limits of the Rexarm. Remember to keep track of this if you include more motors"""
@@ -56,18 +56,20 @@ class Rexarm():
             self.close_gripper()
 
     def open_gripper(self):
-        """ TODO """
+        self.gripper.set_position(self.gripper_open_pos)
         self.gripper_state = False
         pass
 
     def close_gripper(self):
-        """ TODO """
+        self.gripper.set_position(self.gripper_closed_pos)
         self.gripper_state = True
         pass
 
     def toggle_gripper(self):
-        """ TODO """
-        pass
+        if self.gripper_state == True:
+            self.open_gripper()
+        else:
+            self.close_gripper()
 
     def set_positions(self, joint_angles, update_now = True):
         self.clamp(joint_angles)
@@ -119,7 +121,6 @@ class Rexarm():
     def get_positions(self):
         for i,joint in enumerate(self.joints):
             self.joint_angles_fb[i] = joint.get_position()
-        # print self.joint_angles_fb
         return self.joint_angles_fb
 
     def get_speeds(self):
@@ -167,18 +168,9 @@ class Rexarm():
     def get_wrist_pose(self):
         FK= FK_dh(self.joint_angles_fb,6)
         H= FK[0]
-        print "=============================================="
-        # print "IK",FK_dh(IK(H),6)
-        # print "fb",FK_dh(self.joint_angles_fb,6)
-        print "fb",H
-        print "IK", FK_dh(IK(H),6)[0]
-        print "=============================================="
         Q=list(FK[1])
         P=[0,0,0,1]
         worldf = np.matmul(H,P)
-        # H2 = FK_dh(self.joint_angles_fb,2)[0]
-        # w = np.matmul(H2,P)
-        # print w
         Q = [R2D * q_i for q_i in Q]
         b=np.array(Q)
         worldf=np.concatenate((worldf,b))

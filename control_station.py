@@ -105,12 +105,12 @@ class Gui(QMainWindow):
         wrst = DXL_AX(port_num, 4)
         wrst2 = DXL_AX(port_num, 5)
         wrst3 = DXL_XL(port_num, 6)
-        # gripper = DXL_XL(port_num, 7)
+        gripper = DXL_XL(port_num, 7)
 
 
         """Objects Using Other Classes"""
         self.kinect = Kinect()
-        self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2,wrst3),0)
+        self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2,wrst3),gripper)
         self.tp = TrajectoryPlanner(self.rexarm)
         self.sm = StateMachine(self.rexarm, self.tp, self.kinect)
     
@@ -137,6 +137,7 @@ class Gui(QMainWindow):
         self.ui.sldrWrist.valueChanged.connect(self.sliderChange)
         self.ui.sldrWrist2.valueChanged.connect(self.sliderChange)
         self.ui.sldrWrist3.valueChanged.connect(self.sliderChange)
+        self.ui.sldrGrip1.valueChanged.connect(self.sliderChange)
 
 
         self.ui.sldrMaxTorque.valueChanged.connect(self.sliderChange)
@@ -231,6 +232,7 @@ class Gui(QMainWindow):
         self.ui.rdoutWrist.setText(str(self.ui.sldrWrist.value()))
         self.ui.rdoutWrist2.setText(str(self.ui.sldrWrist2.value()))
         self.ui.rdoutWrist3.setText(str(self.ui.sldrWrist3.value()))
+        self.ui.rdoutGrip1.setText(str(self.ui.sldrGrip1.value()))
 
 
 
@@ -245,6 +247,11 @@ class Gui(QMainWindow):
                            self.ui.sldrWrist2.value()*D2R,
                            self.ui.sldrWrist3.value()*D2R])
         self.rexarm.set_positions(joint_positions, update_now = False)
+
+        if(self.ui.sldrGrip1.value() > 0 and self.rexarm.gripper_state == True):
+            self.rexarm.open_gripper()
+        elif(self.ui.sldrGrip1.value() < 0 and self.rexarm.gripper_state == False):
+            self.rexarm.close_gripper()
 
     def directControlChk(self, state):
         if state == Qt.Checked:
@@ -271,9 +278,13 @@ class Gui(QMainWindow):
             x = x - MIN_X
             y = y - MIN_Y
             if(self.kinect.currentDepthFrame.any() != 0):
-                z = self.kinect.currentDepthFrame[y][x]
-                self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" % (x,y,z))
-                self.ui.rdoutMouseWorld.setText("(-,-,-)")
+                z_pixel = self.kinect.currentDepthFrame[y][x]
+                self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" % (x,y,z_pixel))
+                if(self.kinect.kinectCalibrated):
+                    x_w,y_w,z_w = self.kinect.ijToXyz(x,y)
+                    self.ui.rdoutMouseWorld.setText("({0},{1},{2})".format(x_w,y_w,z_w))
+                else:
+                    self.ui.rdoutMouseWorld.setText("(-,-,-)")
 
     def mousePressEvent(self, QMouseEvent):
         """ 

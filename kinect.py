@@ -10,6 +10,7 @@ class Kinect():
         self.cameraIntrinsic = self.loadCameraCalibration()
         self.extrinsicTranslation = None
         self.extrinsicRotation = None
+        self.focalMM = 2.9
         if(freenect.sync_get_depth() == None):
             self.kinectConnected = False
         else:
@@ -143,6 +144,12 @@ class Kinect():
                 if(dest_i >= 0 and dest_i < input_shape[0] and dest_j >= 0 and dest_j < input_shape[1]):
                     result[dest_i][dest_j] = frame[i][j]
         return result
+
+    def ijToXyz(self, i, j):
+        z_pixel = self.currentDepthFrame[j][i]
+        d_cal = 123.6 * np.tan(z_pixel/2842.5 + 1.1863)
+        z_cal = self.extrinsicTranslation[2][0] - d_cal
+        return "-", "-", z_cal
 
     def registerDepthFrame(self, frame):
         """
