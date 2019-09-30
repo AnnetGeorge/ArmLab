@@ -11,10 +11,13 @@ There are some functions to start with, you may need to implement a few more
 def DH(joint_angles):
     # Dh = [a alpha d theta]
     Dh = np.zeros((len(joint_angles),4))
+    d6 = 108.4 # need to check
     Dh = [[0,-np.pi/2,117.75,joint_angles[0]],
           [98.84,0,0,joint_angles[1]-np.pi/2],
           [0,np.pi/2,0,joint_angles[2]+np.pi/2],
-          [0,-np.pi/2,113.1,joint_angles[3]]
+          [0,-np.pi/2,113.1,joint_angles[3]],
+          [0,np.pi/2,0,joint_angles[4]],
+          [0,0,d6,joint_angles[5]]
           ]
 
     return Dh
@@ -48,7 +51,7 @@ def FK_dh(joint_angles, link):
 
     """
     # joint_angles = [base,shld,elbw,wrst,wrst2]
-  
+    # joint_angles = [base,shld,elbw,wrst,wrst2,wrst3] after 0929
     H = np.identity(4)
     Dh = DH(joint_angles)
     for i in range(link):
@@ -76,20 +79,6 @@ def FK_pox(joint_angles):
     pass
 
 
-
-
-def IK(pose):
-    """
-    TODO: implement this function
-
-    Calculate inverse kinematics for rexarm
-
-    return the required joint angles
-
-    """
-    pass
-
-
 def get_euler_angles_from_T(T):
     """
     TODO: implement this function
@@ -105,15 +94,19 @@ def get_euler_angles_from_T(T):
         phi = 0
         psi = np.arctan2(T[0][1],-T[0][0])
     else:
-        phi = np.arctan2(T[1][2]/np.sin(theta),T[0][2]/np.sin(theta))
-        psi = np.arctan2(T[2][1]/np.sin(theta),-T[2][0]/np.sin(theta))
+        phi = np.arctan2(T[1][2],T[0][2])
+        psi = np.arctan2(T[2][1],-T[2][0])
     toReturn = []
     toReturn.append(phi)
     toReturn.append(theta)
     toReturn.append(psi)
     return toReturn
 
-print FK_dh([1.22,np.pi/3,0.2,0.3,0,4],4)[0]
+# Q = list(FK_dh([0,0,0,0,0],4)[1])
+# R2D = 180.0/np.pi
+# Q = [R2D * q_i for q_i in Q]
+# print Q
+
 def get_pose_from_T(T):
     """
     TODO: implement this function
@@ -123,8 +116,137 @@ def get_pose_from_T(T):
     """
     pass
 
+def IK(pose):
+    
+    """
+    TODO: implement this function
 
+    Calculate inverse kinematics for rexarm
 
+    return the required joint angles
+
+    """
+    #pose = R06 = R
+    d6 = 108.4 # gripper length
+    H = pose
+    R = np.zeros((3,3))
+    for i in range(3):
+        for j in range(3):
+            R[i][j] = H[i][j]
+    o=[H[i][3] for i in range(3)] # desire postion
+    # print R
+    # print o
+    # o06 =np.matmul(H,[0,0,0,1])
+    o04 = o - np.matmul(R,[0,0,d6])
+    # print 'o04',o04
+    x4 = o04[0]
+    y4 = o04[1]
+    z4 = o04[2]
+    t11 = np.arctan2(y4,x4) #yc/xc
+    t12 = np.pi+np.arctan2(y4,x4)
+    "cal theta 3 2 sols"
+    o01z = 117.75
+    do01o04 = np.sqrt(x4**2+y4**2+(z4-o01z)**2) #distance o01 o04
+    # print 'd14',do01o04
+   
+    L2 = 98.84
+    L3 = 113.1
+    fix31 = (do01o04**2-L2**2-L3**2)/(2*L2*L3)
+    # print 'beforefix',fix31
+    
+    if fix31 > 1.0+0.0000001:
+        fix31 = 1.0
+        print "=======unreachable========1"
+        print 'afterfix',fix31
+        IK_angle = np.zeros((5,1))
+        return IK_angle
+    elif fix31 <-1.0:
+        fix31 = -1.0
+        print "=======unreachable========2"
+        print 'afterfix',fix31
+        IK_angle = np.zeros((5,1))
+        return IK_angle
+    if fix31>1:
+        fix31 = 1.0
+    t31 = np.arccos(fix31)
+    t32 = -np.arccos(fix31)
+    # print "t31",t31*180/np.pi,"t32",t32*180/np.pi
+    # convert to real t31 *-1
+    t31r = -np.arccos(fix31)
+    t32r = +np.arccos(fix31)
+    # print "t31r",t31r*180/np.pi,"t32r",t32r*180/np.pi
+
+    "cal theta 2 sol depends on theta3 2 sols"
+    #theta 2 = gamma - psi
+    angleslink = [t11,0,0,0,0,0]
+    H01 = FK_dh(angleslink,1)[0]
+    # print 'H01',H01
+    o14 = np.append (o04,[1.0])
+    o14 = np.matmul(np.linalg.inv(H01),o14)
+    # print 'o14',o14
+    gamma = np.arctan2(o14[1],o14[0]) 
+    # print "gamma",gamma*180/np.pi
+    fixpsi = (L2**2+do01o04**2-L3**2)/(2*L2*do01o04)
+    # print "beforefixpsi",fixpsi
+    if fixpsi > 1.0+0.000001:
+        fixpsi = 1.0
+        print "=======unreachable========3"
+        # print 'afterfixpsi',fixpsi
+        IK_angle = np.zeros((5,1))
+        return IK_angle
+    elif fixpsi <-1.0:
+        fixpsi = -1.0
+        print "=======unreachable========4"
+        # print 'afterfixpsi',fixpsi
+        IK_angle = np.zeros((5,1))
+        return IK_angle
+    psi = np.arccos(fixpsi)
+    # print "psi",psi*180/np.pi
+    if t32 < 0.0:
+        t21 = gamma-psi #check!~
+        t21r = 0.5*np.pi+t21
+        # print "t21",t21*180/np.pi,"t21r",t21r*180/np.pi
+    elif t32 >= 0.0:
+        t22 = gamma+psi
+        t21r = 0.5*np.pi+t22
+        # print "t22",t22*180/np.pi,"t21r",t21r*180/np.pi
+    
+    # print 'angle'
+    # print np.arctan2(z4-117.75,x4)*180/np.pi    
+    # print z4
+    # print "theta 2"
+    # print t21*180/np.pi,t22*180/np.pi
+
+    angles_1 = [t11,t21r,t31r,0,0,0]
+    H03 = FK_dh(angles_1,3)[0]
+    R03 = np.zeros((3,3))
+    for i in range(3):
+        for j in range(3):
+            R03[i][j] = H03[i][j]
+    # print "H03"
+    # print np.matmul(H03,[0,0,0,1])
+    R36 = np.matmul(np.linalg.inv(R03),R)
+    t46 = get_euler_angles_from_T(R36)
+    # print t46
+    t41 = t46[0]
+    t51 = t46[1]
+    t61 = t46[2]
+
+    # IK_angle = [t11,t21r,t32r,t41,t51,t61]
+    IK_angle = [t11,t21r,t32r,t41,t51,t61]
+    De = [i*180/np.pi for i in IK_angle]
+    # print De
+    IK_angle = [t11,t21r,t32r,t41,t51,t61] #[[]]
+    return IK_angle
+cos=np.cos
+sin=np.sin
+# A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
+# B = np.array([[1,0,0,201],[0,1,0,141],[0,0,1,148],[0,0,0,1]])
+# # A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
+# print IK(B)
+# aa=IK(B)
+# B=[i*180/np.pi for i in B]
+# print B
 
 def to_s_matrix(w,v):
     """
