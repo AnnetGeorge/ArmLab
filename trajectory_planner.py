@@ -68,4 +68,4 @@ class TrajectoryPlanner():
         for waypoint in plan:
             self.set_initial_wp()
             self.set_final_wp(waypoint)
-            self.go(max_speed=0.1)
+            self.go(max_speed=1)
