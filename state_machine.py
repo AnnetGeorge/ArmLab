@@ -150,6 +150,8 @@ class StateMachine():
     def calibrate(self):
         self.current_state = "calibrate"
         self.next_state = "idle"
+        self.kinect.kinectCalibrated = False
+        self.kinect.depth2rgb_affine = np.float32([[1,0,0],[0,1,0]])
         location_strings = ["lower left corner of board",
                             "upper left corner of board",
                             "upper right corner of board",
@@ -183,10 +185,10 @@ class StateMachine():
                 self.kinect.depth_click_points))
 
         model_points = np.array([\
-            [-305.0,-305.0,0.0],\
-                [-305.0,305.0,0.0],\
-                    [305.0,305.0,0.0],\
-                        [305.0,-305.0,0.0],\
+            [-305.0,305.0,0.0],\
+                [-305.0,-305.0,0.0],\
+                    [305.0,-305.0,0.0],\
+                        [305.0,305.0,0.0],\
                             [0.0,0.0,128.75]])
 
         image_points = np.float32(self.kinect.rgb_click_points[0:4])
@@ -194,8 +196,7 @@ class StateMachine():
         (success, rot_vec, trans_vec) = cv2.solvePnP(model_points[0:4], \
                         image_points,\
                     self.kinect.loadCameraCalibration(),\
-                    None)#,\
-                    #flags=cv2.cv2.SOLVEPNP_ITERATIVE)
+                    None)
         print((success, rot_vec, trans_vec))
         if(success):
             self.kinect.extrinsicTranslation = trans_vec
