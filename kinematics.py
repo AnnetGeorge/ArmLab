@@ -59,7 +59,7 @@ def FK_dh(joint_angles, link):
         H = np.matmul(H,Hc)
         # print(link-i,Hc)
     # print ('----------')
-    ZYZ = get_euler_angles_from_T(H)
+    ZYZ = get_euler_angles_from_T(H)[0]
     return H,ZYZ
 
 
@@ -118,7 +118,7 @@ def get_euler_angles_from_T(T):
     toReturn2.append(theta2)
     toReturn2.append(psi2)
 
-    return toReturn2
+    return toReturn,toReturn2
 
 # Q = list(FK_dh([0,0,0,0,0],4)[1])
 # R2D = 180.0/np.pi
@@ -250,7 +250,7 @@ def IK(pose):
     # print "theta 2"
     # print t21*180/np.pi,t22*180/np.pi
 
-    angles_1 = [t11,t21r,t31r,0,0,0]
+    angles_1 = [t11,t21r,t32r,0,0,0]
     H03 = FK_dh(angles_1,3)[0]
     R03 = np.zeros((3,3))
     for i in range(3):
@@ -259,23 +259,59 @@ def IK(pose):
     # print "H03"
     # print np.matmul(H03,[0,0,0,1])
     R36 = np.matmul(np.linalg.inv(R03),R)
-    t46 = get_euler_angles_from_T(R36)
-    # print t46
+    "ZYZ has 2 sol here, use if to chose"
+    t46 = get_euler_angles_from_T(R36)[0]
+    if (t46[0]>2.62) or (t46[0]<-2.62) or (t46[2]>2.62) or (t46[2]<-2.62):
+        t46 = get_euler_angles_from_T(R36)[1]
+
     t41 = t46[0]
     t51 = t46[1]
     t61 = t46[2]
 
     # IK_angle = [t11,t21r,t32r,t41,t51,t61]
     IK_angle = [t11,t21r,t32r,t41,t51,t61]
+    P=[0,0,0,1]
+    Hq = FK_dh(IK_angle,6)[0]
+    worldf = np.matmul(Hq,P)
+    print ("FK",worldf)
     De = [i*180/np.pi for i in IK_angle]
     print De
     IK_angle = [t11,t21r,t32r,t41,t51,t61] #[[]]
+
+# ""
+# angles_1 = [t11,t22r,t32r,0,0,0]
+#     H032 = FK_dh(angles_1,3)[0]
+#     R032 = np.zeros((3,3))
+#     for i in range(3):
+#         for j in range(3):
+#             R032[i][j] = H032[i][j]
+#     # print "H03"
+#     # print np.matmul(H03,[0,0,0,1])
+#     R362 = np.matmul(np.linalg.inv(R032),R)
+#     t462 = get_euler_angles_from_T(R362)
+#     # print t46
+#     t412 = t462[0]
+#     t512 = t462[1]
+#     t612 = t462[2]
+
+#     # IK_angle = [t11,t21r,t32r,t41,t51,t61]
+#     IK_angle = [t11,t22r,t32r,t41,t51,t61]
+#     P=[0,0,0,1]
+#     Hq = FK_dh(IK_angle,6)[0]
+#     worldf = np.matmul(Hq,P)
+#     print ("FK",worldf)
+#     De = [i*180/np.pi for i in IK_angle]
+#     print De
+#     IK_angle = [t11,t21r,t32r,t41,t51,t61] #[[]]
+
     return IK_angle
 cos=np.cos
 sin=np.sin
 # A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
-B = np.array([[1,0,0,160],[0,1,0,93],[0,0,1,116],[0,0,0,1]])
-B = Gripperpose(B,-150,-168,179)
+B = np.array([[1,0,0,174],[0,1,0,-2],[0,0,1,75],[0,0,0,1]])
+B = Gripperpose(B,-8,-165,-10)
+# B = np.array([[1,0,0,-108.4],[0,1,0,0],[0,0,1,329.69],[0,0,0,1]])
+# B = Gripperpose(B,0,-90,0)
 
 # # A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
 IK(B)
