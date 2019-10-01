@@ -125,10 +125,11 @@ class StateMachine():
         cos = np.cos
         sin = np.sin
         self.A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
-        self.B = np.array([[1,0,0,231],[0,1,0,137],[0,0,1,220],[0,0,0,1]])
+        self.B = np.array([[1,0,0,160],[0,1,0,93],[0,0,1,116],[0,0,0,1]])
+        self.B = kp.Gripperpose(self.B,-150,-168,179)
         self.IKtest = kp.IK(self.B)
         # print "real",self.IKtest
-        self.tp.execute_plan(self.IKtest)
+        self.tp.execute_plan([self.IKtest])
         # self.tp.execute_plan(self.waypoints)
         #for waypoint in self.waypoints:
         #    self.rexarm.set_positions(waypoint)

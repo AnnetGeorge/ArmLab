@@ -86,6 +86,8 @@ def get_euler_angles_from_T(T):
     
     """
     #(phi,theta,psi)
+    cos=np.cos
+    sin=np.sin
     theta = np.arctan2((np.sqrt(T[2][0]**2+T[2][1]**2)),T[2][2])
     if theta == 0:
         phi = 0
@@ -94,13 +96,29 @@ def get_euler_angles_from_T(T):
         phi = 0
         psi = np.arctan2(T[0][1],-T[0][0])
     else:
-        phi = np.arctan2(T[1][2],T[0][2])
-        psi = np.arctan2(T[2][1],-T[2][0])
+        phi = np.arctan2(T[1][2]/sin(theta),T[0][2]/sin(theta))
+        psi = np.arctan2(T[2][1]/sin(theta),-T[2][0]/sin(theta))
     toReturn = []
     toReturn.append(phi)
     toReturn.append(theta)
     toReturn.append(psi)
-    return toReturn
+
+    theta2 = np.arctan2((-np.sqrt(1-T[2][2]**2)),T[2][2])
+    if theta2 == 0:
+        phi2 = 0
+        psi2 = np.arctan2(-T[0][1],T[0][0])
+    elif theta2 == np.pi:
+        phi2 = 0
+        psi2 = np.arctan2(T[0][1],-T[0][0])
+    else:
+        phi2 = np.arctan2(T[1][2]/sin(theta2),T[0][2]/sin(theta2))
+        psi2 = np.arctan2(T[2][1]/sin(theta2),-T[2][0]/sin(theta2))
+    toReturn2 = []
+    toReturn2.append(phi2)
+    toReturn2.append(theta2)
+    toReturn2.append(psi2)
+
+    return toReturn2
 
 # Q = list(FK_dh([0,0,0,0,0],4)[1])
 # R2D = 180.0/np.pi
@@ -115,6 +133,21 @@ def get_pose_from_T(T):
     
     """
     pass
+
+def Gripperpose(H,a,b,c):
+    a=a*np.pi/180
+    b=b*np.pi/180
+    c=c*np.pi/180
+    cos=np.cos
+    sin=np.sin
+    R = np.array([[cos(a)*cos(b)*cos(c)-sin(a)*sin(c), -cos(a)*cos(b)*sin(c)-sin(a)*cos(c), cos(a)*sin(b), 0.0],
+                  [sin(a)*cos(b)*cos(c)+cos(a)*sin(c), -sin(a)*cos(b)*sin(c)+cos(a)*cos(c), sin(a)*sin(b), 0.0],
+                  [-sin(b)*cos(c), sin(b)*sin(c), cos(b), 0.0],
+                  [0.0, 0.0, 0.0, 1]])
+    # print H
+    # print R
+    Hp = np.matmul(H,R)
+    return Hp
 
 def IK(pose):
     
@@ -138,7 +171,7 @@ def IK(pose):
     # print o
     # o06 =np.matmul(H,[0,0,0,1])
     o04 = o - np.matmul(R,[0,0,d6])
-    # print 'o04',o04
+    print 'o04',o04
     x4 = o04[0]
     y4 = o04[1]
     z4 = o04[2]
@@ -235,15 +268,17 @@ def IK(pose):
     # IK_angle = [t11,t21r,t32r,t41,t51,t61]
     IK_angle = [t11,t21r,t32r,t41,t51,t61]
     De = [i*180/np.pi for i in IK_angle]
-    # print De
+    print De
     IK_angle = [t11,t21r,t32r,t41,t51,t61] #[[]]
     return IK_angle
 cos=np.cos
 sin=np.sin
 # A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
-# B = np.array([[1,0,0,201],[0,1,0,141],[0,0,1,148],[0,0,0,1]])
+B = np.array([[1,0,0,160],[0,1,0,93],[0,0,1,116],[0,0,0,1]])
+B = Gripperpose(B,-150,-168,179)
+
 # # A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
-# print IK(B)
+IK(B)
 # aa=IK(B)
 # B=[i*180/np.pi for i in B]
 # print B

@@ -168,6 +168,10 @@ class Rexarm():
     def get_wrist_pose(self):
         FK= FK_dh(self.joint_angles_fb,6)
         H= FK[0]
+        # print ("==============================")
+        # print ("fb",H)
+        # print ("IK",FK_dh(IK(H),6)[0])
+        # print ("==============================")
         Q=list(FK[1])
         P=[0,0,0,1]
         worldf = np.matmul(H,P)
