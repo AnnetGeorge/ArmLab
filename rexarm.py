@@ -48,7 +48,7 @@ class Rexarm():
         for joint in self.joints:
             joint.enable_torque()
             joint.set_position(0.0)
-            joint.set_torque_limit(0.5)
+            joint.set_torque_limit(0.75)
             joint.set_speed(0.25)
         if(self.gripper != 0):
             self.gripper.set_torque_limit(1.0)
@@ -171,6 +171,11 @@ class Rexarm():
         Q=list(FK[1])
         P=[0,0,0,1]
         worldf = np.matmul(H,P)
+        #print ("==============================")
+        #print ("fb",worldf)
+        # print ("IK",(IK(H),6))
+        #print IK(H)
+        #print ("==============================")
         Q = [R2D * q_i for q_i in Q]
         b=np.array(Q)
         worldf=np.concatenate((worldf,b))

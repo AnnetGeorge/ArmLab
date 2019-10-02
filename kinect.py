@@ -173,7 +173,6 @@ class Kinect():
         self.extrinsicTranslation = tVec
         self.extrinsicRotation = rVec
         self.extrinsicRotation_matrix = cv2.Rodrigues(rVec)[0]
-        print(self.extrinsicRotation_matrix)
         self.cameraExtrinsic = np.zeros((4,4))
         self.cameraExtrinsic[0][3] = tVec[0]
         self.cameraExtrinsic[1][3] = tVec[1]
@@ -182,7 +181,6 @@ class Kinect():
         for i in [0,1,2]:
             for j in [0,1,2]:
                 self.cameraExtrinsic[i][j] = self.extrinsicRotation_matrix[i][j]
-        print("extrinsic:{0}".format(self.cameraExtrinsic))
 
     def loadCameraCalibration(self):
         """
