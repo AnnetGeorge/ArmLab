@@ -181,14 +181,14 @@ class StateMachine():
 
         """TODO Perform camera calibration here"""
         self.kinect.depth2rgb_affine = \
-            np.linalg.inv(self.kinect.getAffineTransform(self.kinect.rgb_click_points, \
-                self.kinect.depth_click_points))
+            self.kinect.getAffineTransform(self.kinect.depth_click_points, \
+                self.kinect.rgb_click_points)
 
         model_points = np.array([\
-            [-305.0,305.0,0.0],\
-                [-305.0,-305.0,0.0],\
-                    [305.0,-305.0,0.0],\
-                        [305.0,305.0,0.0],\
+            [-305.0,-305.0,0.0],\
+                [-305.0,305.0,0.0],\
+                    [305.0,305.0,0.0],\
+                        [305.0,-305.0,0.0],\
                             [0.0,0.0,128.75]])
 
         image_points = np.float32(self.kinect.rgb_click_points[0:4])
@@ -199,8 +199,7 @@ class StateMachine():
                     None)
         print((success, rot_vec, trans_vec))
         if(success):
-            self.kinect.extrinsicTranslation = trans_vec
-            self.kinect.extrinsicRotation = rot_vec
+            self.kinect.registerExtrinsicMatrix(rot_vec, trans_vec)
             self.kinect.kinectCalibrated = True
             self.status_message = "Calibration - Completed Calibration"
             time.sleep(1)

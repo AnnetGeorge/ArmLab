@@ -281,10 +281,11 @@ class Gui(QMainWindow):
                 z_pixel = self.kinect.currentDepthFrame[y][x]
                 self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" % (x,y,z_pixel))
                 if(self.kinect.kinectCalibrated):
-                    x_w,y_w,z_w = self.kinect.ijToXyz(x,y)
-                    self.ui.rdoutMouseWorld.setText("({0},{1},{2})".format(x_w,y_w,z_w))
+                    x_w,y_w,z_w,_ = self.kinect.ijToXyz(x,y)
+                    self.ui.rdoutMouseWorld.setText("(%.0f,%.0f,%.0f)" % (x_w,y_w,z_w))
                 else:
-                    self.ui.rdoutMouseWorld.setText("(-,-,-)")
+                    d_cal = 123.6 * np.tan(z_pixel/2842.5 + 1.1863)
+                    self.ui.rdoutMouseWorld.setText("({0},{1},{2})".format('-','-',d_cal))
 
     def mousePressEvent(self, QMouseEvent):
         """ 
