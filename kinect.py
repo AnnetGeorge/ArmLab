@@ -10,6 +10,8 @@ class Kinect():
         self.cameraIntrinsic = self.loadCameraCalibration()
         self.extrinsicTranslation = None
         self.extrinsicRotation = None
+        self.extrinsicRotation_matrix = None
+        self.cameraExtrinsic = None
         self.focalMM = 2.9
         if(freenect.sync_get_depth() == None):
             self.kinectConnected = False
@@ -114,10 +116,10 @@ class Kinect():
         """
         pts1 = coord1[::].astype(np.float32)
         pts2 = coord2[::].astype(np.float32)
-
-        A = np.zeros((6,6))
-        B = np.zeros((6,1))
-        for i in range(3):
+        numPoints = len(pts1)
+        A = np.zeros((numPoints*2,6))
+        B = np.zeros((numPoints*2,1))
+        for i in range(numPoints):
             Arow_1 = [pts1[i][0], pts1[i][1],1,0,0,0]
             Arow_2 = [0,0,0,pts1[i][0], pts1[i][1],1]
             B[i*2] = pts2[i][0]
@@ -125,7 +127,6 @@ class Kinect():
             A[i*2] = Arow_1
             A[(i*2)+1] = Arow_2
 
-        # A_inv = np.linalg.inv(A)
         AtA = np.matmul(A.T, A)
         AtA_inv = np.linalg.inv(AtA)
         pseudo_invA = np.matmul(AtA_inv,A.T)
@@ -134,28 +135,54 @@ class Kinect():
     
     def applyAffine(self, frame, affineMatrix):
         input_shape = frame.shape
-        result = np.zeros(input_shape)
-        for i in range(input_shape[0]):
-            for j in range(input_shape[1]):
-                source_mat = np.array([i,j,1]).T
-                dest_mat = np.matmul(source_mat, affineMatrix)
-                dest_i = int(dest_mat[0])
-                dest_j = int(dest_mat[1])
-                if(dest_i >= 0 and dest_i < input_shape[0] and dest_j >= 0 and dest_j < input_shape[1]):
-                    result[dest_i][dest_j] = frame[i][j]
+        result = np.zeros(input_shape, dtype=np.uint64)
+        for input_y in range(input_shape[0]):
+            for input_x in range(input_shape[1]):
+                source_mat = np.array([float(input_x),float(input_y),1.0]).T
+                dest_mat = np.matmul(affineMatrix,source_mat)
+                dest_x = int(dest_mat[0])
+                dest_y = int(dest_mat[1])
+                if(dest_x >= 0 and dest_x < input_shape[1] and dest_y >= 0 and dest_y < input_shape[0]):
+                    result[dest_y][dest_x] = frame[input_y][input_x]
         return result
 
-    def ijToXyz(self, i, j):
-        z_pixel = self.currentDepthFrame[j][i]
-        d_cal = 123.6 * np.tan(z_pixel/2842.5 + 1.1863)
-        z_cal = self.extrinsicTranslation[2][0] - d_cal
-        return "-", "-", z_cal
+    def imgXyToCamXYZ(self, imgX, imgY):
+        u0 = self.cameraIntrinsic[0][2]
+        v0 = self.cameraIntrinsic[1][2]
+        alpha = self.cameraIntrinsic[0][0]
+        beta = self.cameraIntrinsic[1][1]
+        z_pixel = self.currentDepthFrame[imgY][imgX]
+        Zc = 123.6 * np.tan(z_pixel/2842.5 + 1.1863)
+        Xc = ((imgX - u0) * Zc)/alpha
+        Yc = ((imgY - v0) * Zc)/beta
+        return np.array([Xc,Yc,Zc])
+
+    def ijToXyz(self, input_x, input_y):
+        camCoords = self.imgXyToCamXYZ(input_x, input_y)
+        camCoordsHomogeneous = np.array(np.append(camCoords, 1.0)).T
+        worldCoords = np.matmul(np.linalg.inv(self.cameraExtrinsic),camCoordsHomogeneous)
+        return worldCoords
 
     def registerDepthFrame(self, frame):
         """
         Using an Affine transformation, transforms the depth frame to match the RGB frame
         """
         return self.applyAffine(frame, self.depth2rgb_affine)
+
+    def registerExtrinsicMatrix(self, rVec, tVec):
+        self.extrinsicTranslation = tVec
+        self.extrinsicRotation = rVec
+        self.extrinsicRotation_matrix = cv2.Rodrigues(rVec)[0]
+        print(self.extrinsicRotation_matrix)
+        self.cameraExtrinsic = np.zeros((4,4))
+        self.cameraExtrinsic[0][3] = tVec[0]
+        self.cameraExtrinsic[1][3] = tVec[1]
+        self.cameraExtrinsic[2][3] = tVec[2]
+        self.cameraExtrinsic[3][3] = 1.0
+        for i in [0,1,2]:
+            for j in [0,1,2]:
+                self.cameraExtrinsic[i][j] = self.extrinsicRotation_matrix[i][j]
+        print("extrinsic:{0}".format(self.cameraExtrinsic))
 
     def loadCameraCalibration(self):
         """
