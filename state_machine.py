@@ -119,20 +119,70 @@ class StateMachine():
         self.rexarm.get_feedback()
     
     def execute(self):
-        self.status_message = "State: Executing waypoint path"
+        self.status_message = "State: Running Click to Grab"
         self.current_state = "execute"
         self.rexarm.enable_torque()
-        cos = np.cos
-        sin = np.sin
-        self.A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
-        self.B = np.array([[1,0,0,231],[0,1,0,137],[0,0,1,220],[0,0,0,1]])
-        self.IKtest = kp.IK(self.B)
-        # print "real",self.IKtest
-        self.tp.execute_plan(self.IKtest)
-        # self.tp.execute_plan(self.waypoints)
-        #for waypoint in self.waypoints:
-        #    self.rexarm.set_positions(waypoint)
-        #    self.rexarm.pause(2.0)
+        sourcePoint = None
+        destPoint = None
+        self.rexarm.get_feedback()
+
+        self.kinect.new_click = False
+        while(not (self.kinect.new_click == True)):
+            self.rexarm.get_feedback()  
+        self.kinect.new_click = False
+        sourcePoint = self.kinect.last_click.copy()
+        x_w_src,y_w_src,z_w_src,_ = self.kinect.ijToXyz(sourcePoint[0],sourcePoint[1])
+
+        while(not (self.kinect.new_click == True)):
+            self.rexarm.get_feedback()
+        self.kinect.new_click = False
+        destPoint = self.kinect.last_click.copy()
+        x_w_dest,y_w_dest,z_w_dest,_ = self.kinect.ijToXyz(destPoint[0],destPoint[1])
+        
+        if(z_w_dest < 50):
+            z_w_dest = 50
+        if(z_w_src < 50):
+            z_w_src = 50
+        sourceA_prime = np.array([[1,0,0,x_w_src],[0,1,0,y_w_src],[0,0,1,z_w_src+80],[0,0,0,1]])
+        sourceA = np.array([[1,0,0,x_w_src],[0,1,0,y_w_src],[0,0,1,z_w_src],[0,0,0,1]])
+        angleA = np.arctan2(y_w_src, x_w_src)*(180/np.pi)
+        Y_rot_component = 180
+        while(kp.IK(kp.Gripperpose(sourceA_prime,angleA,Y_rot_component,0)) is None and Y_rot_component >= -180):
+            Y_rot_component -= 1
+        sourceA_prime = kp.Gripperpose(sourceA_prime,angleA,Y_rot_component,0)
+        Y_rot_component = 180
+        while(kp.IK(kp.Gripperpose(sourceA,angleA,Y_rot_component,0)) is None and Y_rot_component >= -180):
+            Y_rot_component -= 1
+        sourceA = kp.Gripperpose(sourceA,angleA,Y_rot_component,0)
+        IK_A_prime = kp.IK(sourceA_prime)
+        IK_A = kp.IK(sourceA)
+
+        sourceB_prime = np.array([[1,0,0,x_w_dest],[0,1,0,y_w_dest],[0,0,1,z_w_dest+80],[0,0,0,1]])
+        sourceB = np.array([[1,0,0,x_w_dest],[0,1,0,y_w_dest],[0,0,1,z_w_dest],[0,0,0,1]])
+        angleB = np.arctan2(y_w_dest, x_w_dest)*(180/np.pi)
+        Y_rot_component = 180
+        while(kp.IK(kp.Gripperpose(sourceB_prime,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
+            Y_rot_component -= 1
+        sourceB_prime = kp.Gripperpose(sourceB_prime,angleB,Y_rot_component,0)
+        Y_rot_component = 180
+        while(kp.IK(kp.Gripperpose(sourceB,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
+            Y_rot_component -= 1
+        sourceB = kp.Gripperpose(sourceB,angleB,Y_rot_component,0)
+        IK_B_prime = kp.IK(sourceB_prime)
+        IK_B = kp.IK(sourceB)
+
+        self.rexarm.open_gripper()
+        time.sleep(3.0)
+        if(IK_A is not None and IK_A_prime is not None):
+            self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],IK_A_prime, IK_A], max_speed = 1.0)
+        self.rexarm.close_gripper()
+        time.sleep(0.75)
+        if(IK_B is not None):
+            self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],IK_B_prime, IK_B], max_speed = 1.0)
+        self.rexarm.open_gripper()
+        if(IK_B is not None):
+            self.tp.execute_plan([IK_B_prime, [0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = 1.0)
+
         self.next_state = "idle"
 
     def addPoints(self):
@@ -151,6 +201,7 @@ class StateMachine():
         self.current_state = "calibrate"
         self.next_state = "idle"
         self.kinect.kinectCalibrated = False
+        self.kinect.new_click = False
         self.kinect.depth2rgb_affine = np.float32([[1,0,0],[0,1,0]])
         location_strings = ["lower left corner of board",
                             "upper left corner of board",
@@ -197,7 +248,6 @@ class StateMachine():
                         image_points,\
                     self.kinect.loadCameraCalibration(),\
                     None)
-        print((success, rot_vec, trans_vec))
         if(success):
             self.kinect.registerExtrinsicMatrix(rot_vec, trans_vec)
             self.kinect.kinectCalibrated = True

@@ -22,7 +22,7 @@ class TrajectoryPlanner():
     def set_final_wp(self, waypoint):
         self.final_wp = waypoint
 
-    def go(self, max_speed = 2.5):
+    def go(self, max_speed = 2.5, look_ahead = 8.0):
         T_exp = self.calc_time_from_waypoints(self.initial_wp, self.final_wp, max_speed)
         startT = time.time()
         curT = startT
@@ -30,7 +30,10 @@ class TrajectoryPlanner():
         spline = self.generate_cubic_spline(self.initial_wp, self.final_wp, T_exp)
         while(running):
             curT = time.time()
-            deltaT = curT - startT
+            deltaT = (curT - startT)
+            look_ahead_deltaT = deltaT * look_ahead
+            if(look_ahead_deltaT > startT + T_exp):
+                look_ahead_deltaT = T_exp - curT
             joint_positions = [0.0] * self.num_joints
             for i in range(self.num_joints):
                 A = spline[i]
@@ -64,8 +67,8 @@ class TrajectoryPlanner():
         return A
 
 
-    def execute_plan(self, plan, look_ahead=8):
+    def execute_plan(self, plan, look_ahead=8, max_speed=2.5):
         for waypoint in plan:
             self.set_initial_wp()
             self.set_final_wp(waypoint)
-            self.go(max_speed=1)
+            self.go(max_speed = max_speed, look_ahead = look_ahead)

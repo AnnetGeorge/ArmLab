@@ -303,7 +303,6 @@ class Gui(QMainWindow):
         self.kinect.last_click[0] = x - MIN_X 
         self.kinect.last_click[1] = y - MIN_Y
         self.kinect.new_click = True
-        #print(self.kinect.last_click)
 
 """main function"""
 def main():
