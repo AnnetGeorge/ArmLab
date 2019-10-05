@@ -132,13 +132,15 @@ class StateMachine():
         self.kinect.new_click = False
         sourcePoint = self.kinect.last_click.copy()
         x_w_src,y_w_src,z_w_src,_ = self.kinect.ijToXyz(sourcePoint[0],sourcePoint[1])
+        # x_w_src,y_w_src,z_w_src = (100, 100, 70)
 
         while(not (self.kinect.new_click == True)):
             self.rexarm.get_feedback()
         self.kinect.new_click = False
         destPoint = self.kinect.last_click.copy()
         x_w_dest,y_w_dest,z_w_dest,_ = self.kinect.ijToXyz(destPoint[0],destPoint[1])
-        
+        # x_w_dest,y_w_dest,z_w_dest = (-100, -100, 70)
+
         if(z_w_dest < 50):
             z_w_dest = 50
         if(z_w_src < 50):
@@ -173,15 +175,21 @@ class StateMachine():
 
         self.rexarm.open_gripper()
         time.sleep(3.0)
+        spd = 1
         if(IK_A is not None and IK_A_prime is not None):
-            self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],IK_A_prime, IK_A], max_speed = 1.0)
+            self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],IK_A_prime, IK_A], max_speed = spd, look_ahead = 8)
         self.rexarm.close_gripper()
         time.sleep(0.75)
         if(IK_B is not None):
-            self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],IK_B_prime, IK_B], max_speed = 1.0)
+            print ("=================")
+            print ("IK_prime",IK_B_prime)
+            self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],IK_B_prime, IK_B], max_speed = spd, look_ahead = 8)
         self.rexarm.open_gripper()
+        time.sleep(1.5)
         if(IK_B is not None):
-            self.tp.execute_plan([IK_B_prime, [0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = 1.0)
+            print ("=================")
+            print ("IK",IK_B)
+            self.tp.execute_plan([IK_B_prime, [0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
 
         self.next_state = "idle"
 

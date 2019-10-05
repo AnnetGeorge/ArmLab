@@ -31,16 +31,16 @@ class TrajectoryPlanner():
         while(running):
             curT = time.time()
             deltaT = (curT - startT)
-            look_ahead_deltaT = deltaT * look_ahead
+            look_ahead_deltaT = deltaT + look_ahead/1000
             if(look_ahead_deltaT > startT + T_exp):
                 look_ahead_deltaT = T_exp - curT
             joint_positions = [0.0] * self.num_joints
             for i in range(self.num_joints):
                 A = spline[i]
-                joint_pos = A[0] + A[1]*deltaT + (A[2])*(deltaT**2) + (A[3])*(deltaT**3)
+                joint_pos = A[0] + A[1]*look_ahead_deltaT + (A[2])*(look_ahead_deltaT**2) + (A[3])*(look_ahead_deltaT**3) 
                 joint_positions[i] = joint_pos
             self.rexarm.set_positions(joint_positions)
-            self.rexarm.pause(self.dt)
+            # self.rexarm.pause(self.dt)
             if(curT > (startT + T_exp)):
                 running = False
 
@@ -50,6 +50,8 @@ class TrajectoryPlanner():
     def calc_time_from_waypoints(self, initial_wp, final_wp, max_speed):
         delta = np.array(final_wp) - np.array(initial_wp)
         times = np.abs(delta / max_speed)
+        print(np.amax(times))
+
         return np.amax(times)
 
     def generate_cubic_spline(self, initial_wp, final_wp, T):

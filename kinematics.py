@@ -295,7 +295,7 @@ def IK(pose):
     R362 = np.matmul(np.linalg.inv(R032),R)
     "ZYZ has 2 sol here, use if to chose"
     t462 = get_euler_angles_from_T(R362)[0]
-    if (t462[0]>2.62) or (t462[0]<-2.62) or (t462[2]>2.62) or (t462[2]<-2.62):
+    if (t462[0]>2.43) or (t462[0]<-2.43) or (t462[2]>2.62) or (t462[2]<-2.62):
         t462 = get_euler_angles_from_T(R362)[1]
 
     t42 = t462[0]
@@ -307,20 +307,28 @@ def IK(pose):
     Hq2 = FK_dh(IK_angle2,6)[0]
     worldf2 = np.matmul(Hq2,P)
 
+    if IK_angle2[1] > 2.22 or IK_angle2[1]<-2.22 or IK_angle[1]>2.22 or IK_angle[1]<-2.22:
+        return None
+
     
     for i in IK_angle2:
         if np.abs(i)>2.62:
-            print ("IK2*************************")
-            print ("IK2 in ",worldf2)
-            De = [i*180/np.pi for i in IK_angle2]
-            print De
+            print ("IK*************************")
+            print ("IK in ",worldf)
             IK_angle = [t1f,t21r,t31r,t41,t51,t61]
+            if IK_angle[5] >=3.105 or  IK_angle[5] <=-3.105:
+                IK_angle[5] = 0
+            De = [i*180/np.pi for i in IK_angle]
+            print De   
              #[[]]
             return IK_angle
-    print ("IK in ",worldf)
-    De = [i*180/np.pi for i in IK_angle]
+    print ("IK2*************************")
+    print ("IK2 in ",worldf2)
+    De = [i*180/np.pi for i in IK_angle2]
     print De
     IK_angle2 = [t1f,t22r,t32r,t42,t52,t62]
+    De = [i*180/np.pi for i in IK_angle]
+    print De
      #[[]]
     return IK_angle2
 cos=np.cos
@@ -328,11 +336,11 @@ sin=np.sin
 # A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
 # B = np.array([[1,0,0,174],[0,1,0,-2],[0,0,1,75],[0,0,0,1]])
 # B = Gripperpose(B,-8,-165,-10)
-B = np.array([[1,0,0,78],[0,1,0,-191],[0,0,1,88],[0,0,0,1]])
-B = Gripperpose(B,-102,154,99)
+# B = np.array([[1,0,0,-122],[0,1,0,-207],[0,0,1,75],[0,0,0,1]])
+# B = Gripperpose(B,-133,147,166)
 
 # # A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
-IK(B)
+# IK(B)
 # aa=IK(B)
 # B=[i*180/np.pi for i in B]
 # print B

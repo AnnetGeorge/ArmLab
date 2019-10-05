@@ -113,6 +113,8 @@ class Gui(QMainWindow):
         self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2,wrst3),gripper)
         self.tp = TrajectoryPlanner(self.rexarm)
         self.sm = StateMachine(self.rexarm, self.tp, self.kinect)
+        self.traj_path = []
+        self.was_executing = False
     
         """ 
         Attach Functions to Buttons & Sliders
@@ -206,6 +208,13 @@ class Gui(QMainWindow):
         self.ui.rdoutT.setText(str("%+.2f" % (pos[3])))
         self.ui.rdoutG.setText(str("%+.2f" % (pos[4])))
         self.ui.rdoutP.setText(str("%+.2f" % (pos[5])))
+        if self.sm.current_state == "execute":
+            self.was_executing = True
+            pos.append(time.time())
+            self.traj_path.append(pos)
+        if self.sm.current_state == "idle" and self.was_executing:
+            self.was_executing = False
+            np.save("recent_01.npy", self.traj_path)
 
     @pyqtSlot(str)
     def updateStatusMessage(self, msg):

@@ -48,8 +48,8 @@ class Rexarm():
         for joint in self.joints:
             joint.enable_torque()
             joint.set_position(0.0)
-            joint.set_torque_limit(0.75)
-            joint.set_speed(0.25)
+            joint.set_torque_limit(0.85)
+            joint.set_speed(2)
         if(self.gripper != 0):
             self.gripper.set_torque_limit(1.0)
             self.gripper.set_speed(0.8)
@@ -182,3 +182,4 @@ class Rexarm():
         a=list (worldf)
         del a[3]
         return a
+
