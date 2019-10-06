@@ -126,21 +126,19 @@ class StateMachine():
         destPoint = None
         self.rexarm.get_feedback()
 
-        self.kinect.new_click = False
-        while(not (self.kinect.new_click == True)):
-            self.rexarm.get_feedback()  
-        self.kinect.new_click = False
-        sourcePoint = self.kinect.last_click.copy()
-        x_w_src,y_w_src,z_w_src,_ = self.kinect.ijToXyz(sourcePoint[0],sourcePoint[1])
-        # x_w_src,y_w_src,z_w_src = (100, 100, 70)
+        # self.kinect.new_click = False
+        # while(not (self.kinect.new_click == True)):
+        #     self.rexarm.get_feedback()  
+        # self.kinect.new_click = False
+        # sourcePoint = self.kinect.last_click.copy()
+        # x_w_src,y_w_src,z_w_src,_ = self.kinect.ijToXyz(sourcePoint[0],sourcePoint[1])
+        x_w_src,y_w_src,z_w_src = (200, 200, 70)
 
-        while(not (self.kinect.new_click == True)):
-            self.rexarm.get_feedback()
-        self.kinect.new_click = False
-        destPoint = self.kinect.last_click.copy()
-        x_w_dest,y_w_dest,z_w_dest,_ = self.kinect.ijToXyz(destPoint[0],destPoint[1])
-        # x_w_dest,y_w_dest,z_w_dest = (-100, -100, 70)
-
+        # while(not (self.kinect.new_click == True)):
+        #     self.rexarm.get_feedback()
+        # self.kinect.new_click = False
+        # destPoint = self.kinect.last_click.copy()
+        # x_w_dest,y_w_dest,z_w_dest,_ = self.kinect.ijToXyz(destPoint[0],destPoint[1]
         if(z_w_dest < 50):
             z_w_dest = 50
         if(z_w_src < 50):
@@ -159,19 +157,6 @@ class StateMachine():
         IK_A_prime = kp.IK(sourceA_prime)
         IK_A = kp.IK(sourceA)
 
-        sourceB_prime = np.array([[1,0,0,x_w_dest],[0,1,0,y_w_dest],[0,0,1,z_w_dest+80],[0,0,0,1]])
-        sourceB = np.array([[1,0,0,x_w_dest],[0,1,0,y_w_dest],[0,0,1,z_w_dest],[0,0,0,1]])
-        angleB = np.arctan2(y_w_dest, x_w_dest)*(180/np.pi)
-        Y_rot_component = 180
-        while(kp.IK(kp.Gripperpose(sourceB_prime,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
-            Y_rot_component -= 1
-        sourceB_prime = kp.Gripperpose(sourceB_prime,angleB,Y_rot_component,0)
-        Y_rot_component = 180
-        while(kp.IK(kp.Gripperpose(sourceB,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
-            Y_rot_component -= 1
-        sourceB = kp.Gripperpose(sourceB,angleB,Y_rot_component,0)
-        IK_B_prime = kp.IK(sourceB_prime)
-        IK_B = kp.IK(sourceB)
 
         self.rexarm.open_gripper()
         time.sleep(3.0)
@@ -180,16 +165,21 @@ class StateMachine():
             self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],IK_A_prime, IK_A], max_speed = spd, look_ahead = 8)
         self.rexarm.close_gripper()
         time.sleep(0.75)
-        if(IK_B is not None):
-            print ("=================")
-            print ("IK_prime",IK_B_prime)
-            self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],IK_B_prime, IK_B], max_speed = spd, look_ahead = 8)
-        self.rexarm.open_gripper()
-        time.sleep(1.5)
-        if(IK_B is not None):
-            print ("=================")
-            print ("IK",IK_B)
-            self.tp.execute_plan([IK_B_prime, [0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
+        
+        for move in range(40):
+            sourceA = np.array([[1,0,0,x_w_src],[0,1,0,y_w_src-10*(move+1)],[0,0,1,z_w_src],[0,0,0,1]])
+            while(kp.IK(kp.Gripperpose(sourceA,angleA,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceA_next = kp.Gripperpose(sourceA,angleA,Y_rot_component,0)
+            if(kp.IK(sourceA_next) is None):
+                while(kp.IK(kp.Gripperpose(sourceA,angleA+90,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                    Y_rot_component -= 1
+                sourceA_next = kp.Gripperpose(sourceA,angleA,Y_rot_component,0)
+            IK_A = kp.IK(sourceA_next)
+            if(IK_A is not None):
+                self.tp.execute_plan([[IK_A], max_speed = spd, look_ahead = 8)
+            time.sleep(1.5)
+
 
         self.next_state = "idle"
 
