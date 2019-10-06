@@ -219,14 +219,13 @@ class StateMachine():
         while(kp.IK(kp.Gripperpose(initialPose,45,Y_rot_component,0)) is None and Y_rot_component >= -180):
             Y_rot_component -= 1
         curPoseOffset = np.eye(4)
-        initialPose=kp.Gripperpose(initialPose,45,Y_rot_component,0)
-        path = np.array([kp.IK(initialPose)])
+        plan1=kp.Gripperpose(initialPose,45,Y_rot_component,0)
+        path = np.array([kp.IK(plan1)])
         # step_size_mm = 5
-        for i in range(80):
-            curPoseOffset += [[0,0,0,0],[0,0,0,-5],[0,0,0,0],[0,0,0,0]]
-            # newIK = kp.IK(np.matmul(curPoseOffset,initialPose))
-            current_pose = initialPose+curPoseOffset
-            newIK = kp.IK(current_pose)
+        for i in range(40):
+            curPoseOffset = [[1,0,0,0],[0,1,0,-5*(i+1)],[0,0,1,0],[0,0,0,1]]
+            curPose = np.matmul(curPoseOffset,initialPose)
+            newIK = kp.IK(kp.Gripperpose(curPose,45,Y_rot_component,0))
             toAppend = np.array([newIK])
             print(path)
             print(toAppend)
@@ -234,9 +233,9 @@ class StateMachine():
                 path = np.concatenate((path,toAppend), axis=0)
             else:
                 Y_rot_component = 180
-                while(kp.IK(kp.Gripperpose(current_pose,-45,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                while(kp.IK(kp.Gripperpose(curPose,-45,Y_rot_component,0)) is None and Y_rot_component >= -180):
                     Y_rot_component -= 1
-                newIK = kp.IK(kp.Gripperpose(current_pose,-45,Y_rot_component,0))
+                newIK = kp.IK(kp.Gripperpose(curPose,-45,Y_rot_component,0))
                 print(newIK)
                 toAppend = np.array([newIK])
                 path = np.concatenate((path,toAppend), axis=0)
