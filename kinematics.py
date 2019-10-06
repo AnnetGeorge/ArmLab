@@ -313,22 +313,22 @@ def IK(pose):
     
     for i in IK_angle2:
         if np.abs(i)>2.62:
-            print ("IK*************************")
-            print ("IK in ",worldf)
+            #print ("IK*************************")
+            #print ("IK in ",worldf)
             IK_angle = [t1f,t21r,t31r,t41,t51,t61]
             if IK_angle[5] >=3.105 or  IK_angle[5] <=-3.105:
                 IK_angle[5] = 0
             De = [i*180/np.pi for i in IK_angle]
-            print De   
+            #print De   
              #[[]]
             return IK_angle
-    print ("IK2*************************")
-    print ("IK2 in ",worldf2)
+    #print ("IK2*************************")
+    #print ("IK2 in ",worldf2)
     De = [i*180/np.pi for i in IK_angle2]
-    print De
+    #print De
     IK_angle2 = [t1f,t22r,t32r,t42,t52,t62]
     De = [i*180/np.pi for i in IK_angle]
-    print De
+    #print De
      #[[]]
     return IK_angle2
 cos=np.cos

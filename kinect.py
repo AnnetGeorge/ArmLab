@@ -131,7 +131,7 @@ class Kinect():
         AtA_inv = np.linalg.inv(AtA)
         pseudo_invA = np.matmul(AtA_inv,A.T)
         result = np.matmul(pseudo_invA,B)
-        return [[result[0][0],result[1][0],result[2][0]],[result[3][0],result[4][0],result[5][0]],[0,0,1]]
+        return [[result[0][0],result[1][0],result[2][0]],[result[3][0],result[4][0],result[5][0]]]
     
     def applyAffine(self, frame, affineMatrix):
         input_shape = frame.shape
@@ -144,6 +144,10 @@ class Kinect():
                 dest_y = int(dest_mat[1])
                 if(dest_x >= 0 and dest_x < input_shape[1] and dest_y >= 0 and dest_y < input_shape[0]):
                     result[dest_y][dest_x] = frame[input_y][input_x]
+        return result
+    
+    def applyAffineCV(self, frame, affineMatrix):
+        result = cv2.warpAffine(np.array(frame),np.array(affineMatrix),(frame.shape[1], frame.shape[0]))
         return result
 
     def imgXyToCamXYZ(self, imgX, imgY):
@@ -167,7 +171,7 @@ class Kinect():
         """
         Using an Affine transformation, transforms the depth frame to match the RGB frame
         """
-        return self.applyAffine(frame, self.depth2rgb_affine)
+        return self.applyAffineCV(frame, self.depth2rgb_affine)
 
     def registerExtrinsicMatrix(self, rVec, tVec):
         self.extrinsicTranslation = tVec
@@ -181,6 +185,8 @@ class Kinect():
         for i in [0,1,2]:
             for j in [0,1,2]:
                 self.cameraExtrinsic[i][j] = self.extrinsicRotation_matrix[i][j]
+        print("extrinsic mat")
+        print(self.cameraExtrinsic)
 
     def loadCameraCalibration(self):
         """

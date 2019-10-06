@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import kinematics as kp
+import math
 import cv2
 
 """
@@ -32,6 +33,8 @@ class StateMachine():
                 self.idle()                
             if(self.next_state == "estop"):
                 self.estop()
+            if(self.next_state == "task4"):
+                self.task4()
             if(self.next_state == "limp"):
                 self.current_state = "limp"
 
@@ -46,6 +49,8 @@ class StateMachine():
                 self.calibrate()
             if(self.next_state == "execute"):
                 self.execute()
+            if(self.next_state == "task4"):
+                self.task4()
             if(self.next_state == "limp"):
                 self.current_state = "limp"
             if (self.next_state == "teaching"):
@@ -63,6 +68,8 @@ class StateMachine():
                 self.calibrate()
             if(self.next_state == "execute"):
                 self.execute()
+            if(self.next_state == "task4"):
+                self.task4()
             if (self.next_state == "teaching"):
                 self.waypoints = []
                 self.teaching()
@@ -204,6 +211,37 @@ class StateMachine():
         self.rexarm.get_feedback()
         self.next_state = "teaching"
 
+    def task4(self):
+        self.current_state = "task4"
+        self.next_state = "idle"
+        initialPose = [[1,0,0,200],[0,1,0,200],[0,0,1,50],[0,0,0,1]]
+        Y_rot_component = 180
+        while(kp.IK(kp.Gripperpose(initialPose,45,Y_rot_component,0)) is None and Y_rot_component >= -180):
+            Y_rot_component -= 1
+        curPoseOffset = np.eye(4)
+        initialPose=kp.Gripperpose(initialPose,45,Y_rot_component,0)
+        path = np.array([kp.IK(initialPose)])
+        # step_size_mm = 5
+        for i in range(80):
+            curPoseOffset += [[0,0,0,0],[0,0,0,-5],[0,0,0,0],[0,0,0,0]]
+            # newIK = kp.IK(np.matmul(curPoseOffset,initialPose))
+            current_pose = initialPose+curPoseOffset
+            newIK = kp.IK(current_pose)
+            toAppend = np.array([newIK])
+            print(path)
+            print(toAppend)
+            if(newIK is not None):
+                path = np.concatenate((path,toAppend), axis=0)
+            else:
+                Y_rot_component = 180
+                while(kp.IK(kp.Gripperpose(current_pose,-45,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                    Y_rot_component -= 1
+                newIK = kp.IK(kp.Gripperpose(current_pose,-45,Y_rot_component,0))
+                print(newIK)
+                toAppend = np.array([newIK])
+                path = np.concatenate((path,toAppend), axis=0)
+        print(path)
+        self.tp.execute_plan(path,max_speed=1.0)
 
     def calibrate(self):
         self.current_state = "calibrate"
@@ -262,6 +300,4 @@ class StateMachine():
             self.status_message = "Calibration - Completed Calibration"
             time.sleep(1)
         else:
-            self.status_message = "Calibration - failed! See terminal for error msg."
-
-        
+            self.status_message = "Calibration - failed! See terminal for error msg."        
