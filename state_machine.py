@@ -167,7 +167,7 @@ class StateMachine():
         IK_A = kp.IK(sourceA)
 
         sourceB_prime = np.array([[1,0,0,x_w_dest],[0,1,0,y_w_dest],[0,0,1,z_w_dest+80],[0,0,0,1]])
-        sourceB = np.array([[1,0,0,x_w_dest],[0,1,0,y_w_dest],[0,0,1,z_w_dest],[0,0,0,1]])
+        sourceB = np.array([[1,0,0,x_w_dest],[0,1,0,y_w_dest],[0,0,1,z_w_dest+20],[0,0,0,1]])
         angleB = np.arctan2(y_w_dest, x_w_dest)*(180/np.pi)
         Y_rot_component = 180
         while(kp.IK(kp.Gripperpose(sourceB_prime,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
@@ -214,34 +214,228 @@ class StateMachine():
     def task4(self):
         self.current_state = "task4"
         self.next_state = "idle"
-        initialPose = [[1,0,0,200],[0,1,0,200],[0,0,1,50],[0,0,0,1]]
+        self.rexarm.enable_torque()
+        sourcePoint = None
+        destPoint = None
+        self.rexarm.get_feedback()
+
+        # self.kinect.new_click = False
+        # while(not (self.kinect.new_click == True)):
+        #     self.rexarm.get_feedback()  
+        # self.kinect.new_click = False
+        # sourcePoint = self.kinect.last_click.copy()
+        # x_w_src,y_w_src,z_w_src,_ = self.kinect.ijToXyz(sourcePoint[0],sourcePoint[1])
+        x_w_src,y_w_src,z_w_src = (200, 200, 80)
+
+        # while(not (self.kinect.new_click == True)):
+        #     self.rexarm.get_feedback()
+        # self.kinect.new_click = False
+        # destPoint = self.kinect.last_click.copy()
+        # x_w_dest,y_w_dest,z_w_dest,_ = self.kinect.ijToXyz(destPoint[0],destPoint[1]
+        # if(z_w_dest < 50):
+        #     z_w_dest = 50
+        if(z_w_src < 50):
+            z_w_src = 50
+        sourceA_prime = np.array([[1,0,0,x_w_src],[0,1,0,y_w_src],[0,0,1,z_w_src+80],[0,0,0,1]])
+        sourceA = np.array([[1,0,0,x_w_src],[0,1,0,y_w_src],[0,0,1,z_w_src],[0,0,0,1]])
+        angleA = np.arctan2(y_w_src, x_w_src)*(180/np.pi)
+        angleB = -45
+        angleC = np.arctan2(y_w_src, -x_w_src)*(180/np.pi)
+
         Y_rot_component = 180
-        while(kp.IK(kp.Gripperpose(initialPose,45,Y_rot_component,0)) is None and Y_rot_component >= -180):
+        while(kp.IK(kp.Gripperpose(sourceA_prime,angleA,Y_rot_component,0)) is None and Y_rot_component >= -180):
             Y_rot_component -= 1
-        curPoseOffset = np.eye(4)
-        initialPose=kp.Gripperpose(initialPose,45,Y_rot_component,0)
-        path = np.array([kp.IK(initialPose)])
-        # step_size_mm = 5
-        for i in range(80):
-            curPoseOffset += [[0,0,0,0],[0,0,0,-5],[0,0,0,0],[0,0,0,0]]
-            # newIK = kp.IK(np.matmul(curPoseOffset,initialPose))
-            current_pose = initialPose+curPoseOffset
-            newIK = kp.IK(current_pose)
-            toAppend = np.array([newIK])
-            print(path)
-            print(toAppend)
-            if(newIK is not None):
-                path = np.concatenate((path,toAppend), axis=0)
-            else:
-                Y_rot_component = 180
-                while(kp.IK(kp.Gripperpose(current_pose,-45,Y_rot_component,0)) is None and Y_rot_component >= -180):
+        sourceA_prime = kp.Gripperpose(sourceA_prime,angleA,Y_rot_component,0)
+        Y_rot_component = 180
+        while(kp.IK(kp.Gripperpose(sourceA,angleA,Y_rot_component,0)) is None and Y_rot_component >= -180):
+            Y_rot_component -= 1
+        sourceA = kp.Gripperpose(sourceA,angleA,Y_rot_component,0)
+        IK_A_prime = kp.IK(sourceA_prime)
+        IK_A = kp.IK(sourceA)
+
+
+        self.rexarm.open_gripper()
+        time.sleep(3.0)
+        spd = 1
+        if(IK_A is not None and IK_A_prime is not None):
+            self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],IK_A_prime, IK_A], max_speed = spd, look_ahead = 8)
+        self.rexarm.close_gripper()
+        time.sleep(0.75)
+        plan1 = []
+        for move in range(21):
+            sourceA = np.array([[1,0,0,x_w_src],[0,1,0,y_w_src-10*(move+1)],[0,0,1,z_w_src],[0,0,0,1]])
+            while(kp.IK(kp.Gripperpose(sourceA,angleA,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceA_next = kp.Gripperpose(sourceA,angleA,Y_rot_component,0)
+            if(kp.IK(sourceA_next) is None):
+                while(kp.IK(kp.Gripperpose(sourceA,angleA-90,Y_rot_component,0)) is None and Y_rot_component >= -180):
                     Y_rot_component -= 1
-                newIK = kp.IK(kp.Gripperpose(current_pose,-45,Y_rot_component,0))
-                print(newIK)
-                toAppend = np.array([newIK])
-                path = np.concatenate((path,toAppend), axis=0)
-        print(path)
-        self.tp.execute_plan(path,max_speed=1.0)
+                sourceA_next = kp.Gripperpose(sourceA,angleA-90,Y_rot_component,0)
+            IK_A = kp.IK(sourceA_next)
+            plan1.append(IK_A)
+            # if(IK_A is not None):
+                # self.tp.execute_plan([IK_A], max_speed = spd, look_ahead = 8)
+            # time.sleep(0.2)
+        plan1 = np.array(plan1)
+        self.tp.execute_plan(plan1, max_speed = spd, look_ahead = 8)
+        # print (plan1)
+        self.rexarm.open_gripper()
+        time.sleep(3.0)
+        sourceA_prime = kp.FK_dh(plan1[-1],6)[0]
+        P=np.array([[1,0,0,0],[0,1,0,0],[0,0,1,-70],[0,0,0,1]])
+        sourceA_prime = np.matmul(sourceA_prime,P)
+        sourceA_prime = kp.IK(sourceA_prime)
+        self.tp.execute_plan([sourceA_prime,[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
+
+        plan = []
+        for move in range(24):
+            sourceB = np.array([[1,0,0,x_w_src-10],[0,1,0,y_w_src-170-10*(move+1)],[0,0,1,z_w_src],[0,0,0,1]])
+            Y_rot_component=180
+            while(kp.IK(kp.Gripperpose(sourceB,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceB_next = kp.Gripperpose(sourceB,angleB,Y_rot_component,0)
+            IK_B = kp.IK(sourceB_next)
+            plan.append(IK_B)
+        plan = np.array(plan)
+        print(plan)
+        self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],plan[1]], max_speed = spd, look_ahead = 8)
+        self.rexarm.close_gripper()
+        # time.sleep(2.0)
+        self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
+        self.rexarm.open_gripper()
+        sourceB_prime = kp.FK_dh(plan[-1],6)[0]
+        P=np.array([[1,0,0,0],[0,1,0,0],[0,0,1,-70],[0,0,0,1]])
+        sourceB_prime = np.matmul(sourceB_prime,P)
+        sourceB_prime = kp.IK(sourceB_prime)
+        self.tp.execute_plan([sourceB_prime,[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
+        time.sleep(3.0)
+
+
+        plan = []
+        for move in range(29):
+            sourceB = np.array([[1,0,0,x_w_src-10*(move+1)],[0,1,0,-y_w_src],[0,0,1,z_w_src],[0,0,0,1]])
+            Y_rot_component=180
+            while(kp.IK(kp.Gripperpose(sourceB,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceB_next = kp.Gripperpose(sourceB,angleB,Y_rot_component,0)
+            IK_B = kp.IK(sourceB_next)
+            if (IK_B is not None):
+                plan.append(IK_B)
+        print(len(plan))
+        self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],plan[1]], max_speed = spd, look_ahead = 8)
+        plan = np.array(plan)
+        self.rexarm.close_gripper()
+        self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
+        time.sleep(3.0)
+        self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
+
+        plan = []
+        Y_rot_component=180
+        for move in range(11):
+            sourceB = np.array([[1,0,0,-90-10*(move+1)],[0,1,0,-y_w_src],[0,0,1,z_w_src],[0,0,0,1]])     
+            while(kp.IK(kp.Gripperpose(sourceB,angleA,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceB_next = kp.Gripperpose(sourceB,angleA,Y_rot_component,0)
+            IK_B = kp.IK(sourceB_next)
+            if (IK_B is not None):
+                plan.append(IK_B)
+        print(plan)
+        print(len(plan))
+        plan = np.array(plan) 
+        self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
+        # self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
+
+
+        "Lower Left to Upper Left"
+        plan = []
+        Y_rot_component=180
+        for move in range(14):
+            sourceB = np.array([[1,0,0,-x_w_src],[0,1,0,-y_w_src+10*(move+1)],[0,0,1,z_w_src],[0,0,0,1]])     
+            while(kp.IK2(kp.Gripperpose(sourceB,angleA,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceB_next = kp.Gripperpose(sourceB,angleA,Y_rot_component,0)
+            IK_B = kp.IK2(sourceB_next)
+            if (IK_B is not None):
+                plan.append(IK_B)
+        
+        print(len(plan))
+        plan = np.array(plan)
+        print(plan)
+        self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
+
+
+        plan = []
+        Y_rot_component=180
+        for move in range(2):
+            Y_rot_component=180
+            sourceB = np.array([[1,0,0,-x_w_src],[0,1,0,-y_w_src+150+10*(move+1)],[0,0,1,z_w_src],[0,0,0,1]])     
+            while(kp.IK(kp.Gripperpose(sourceB,angleC,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceB_next = kp.Gripperpose(sourceB,angleC,Y_rot_component,0)
+            IK_B = kp.IK(sourceB_next)
+            if (IK_B is not None):
+                plan.append(IK_B)
+        
+        print(len(plan))
+        plan = np.array(plan)
+        print(plan)
+        self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)  
+
+        
+        plan = []
+        Y_rot_component=180
+        for move in range(24):
+            Y_rot_component=180
+            sourceB = np.array([[1,0,0,-x_w_src],[0,1,0,-y_w_src+170+10*(move+1)],[0,0,1,z_w_src],[0,0,0,1]])     
+            while(kp.IK2(kp.Gripperpose(sourceB,angleC,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceB_next = kp.Gripperpose(sourceB,angleC,Y_rot_component,0)
+            IK_B = kp.IK2(sourceB_next)
+            if (IK_B is not None):
+                plan.append(IK_B)
+        
+        print(len(plan))
+        plan = np.array(plan)
+        print(plan)
+        self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)       
+
+        plan = []
+        Y_rot_component=180
+        for move in range(20):
+            Y_rot_component=180
+            sourceB = np.array([[1,0,0,-x_w_src+10*(move+1)],[0,1,0,y_w_src],[0,0,1,z_w_src],[0,0,0,1]])     
+            while(kp.IK2(kp.Gripperpose(sourceB,angleC,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceB_next = kp.Gripperpose(sourceB,angleC,Y_rot_component,0)
+            IK_B = kp.IK2(sourceB_next)
+            if (IK_B is not None):
+                plan.append(IK_B)
+        
+        print(len(plan))
+        plan = np.array(plan)
+        print(plan)
+        self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
+
+        plan = []
+        Y_rot_component=180
+        for move in range(20):
+            Y_rot_component=180
+            sourceB = np.array([[1,0,0,-x_w_src+200+10*(move+1)],[0,1,0,y_w_src],[0,0,1,z_w_src],[0,0,0,1]])     
+            while(kp.IK(kp.Gripperpose(sourceB,angleA,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceB_next = kp.Gripperpose(sourceB,angleA,Y_rot_component,0)
+            IK_B = kp.IK(sourceB_next)
+            if (IK_B is not None):
+                plan.append(IK_B)
+        
+        print(len(plan))
+        plan = np.array(plan)
+        print(plan)
+        self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)     
+
+
+        self.next_state = "idle"
+
 
     def calibrate(self):
         self.current_state = "calibrate"

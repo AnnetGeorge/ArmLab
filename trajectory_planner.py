@@ -40,7 +40,6 @@ class TrajectoryPlanner():
                 joint_pos = A[0] + A[1]*look_ahead_deltaT + (A[2])*(look_ahead_deltaT**2) + (A[3])*(look_ahead_deltaT**3) 
                 joint_positions[i] = joint_pos
             self.rexarm.set_positions(joint_positions)
-            # self.rexarm.pause(self.dt)
             if(curT > (startT + T_exp)):
                 running = False
 
@@ -50,7 +49,6 @@ class TrajectoryPlanner():
     def calc_time_from_waypoints(self, initial_wp, final_wp, max_speed):
         delta = np.array(final_wp) - np.array(initial_wp)
         times = np.abs(delta / max_speed)
-        print(np.amax(times))
 
         return np.amax(times)
 
