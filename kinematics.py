@@ -57,8 +57,6 @@ def FK_dh(joint_angles, link):
     for i in range(link):
         Hc = calH(Dh[i])
         H = np.matmul(H,Hc)
-        # print(link-i,Hc)
-    # print ('----------')
     ZYZ = get_euler_angles_from_T(H)[0]
     return H,ZYZ
 
@@ -120,11 +118,6 @@ def get_euler_angles_from_T(T):
 
     return toReturn,toReturn2
 
-# Q = list(FK_dh([0,0,0,0,0],4)[1])
-# R2D = 180.0/np.pi
-# Q = [R2D * q_i for q_i in Q]
-# print Q
-
 def get_pose_from_T(T):
     """
     TODO: implement this function
@@ -167,11 +160,9 @@ def IK(pose):
         for j in range(3):
             R[i][j] = H[i][j]
     o=[H[i][3] for i in range(3)] # desire postion
-    # print R
-    # print o
-    # o06 =np.matmul(H,[0,0,0,1])
+
     o04 = o - np.matmul(R,[0,0,d6])
-    # print 'o04',o04
+
     x4 = o04[0]
     y4 = o04[1]
     z4 = o04[2]
@@ -180,12 +171,12 @@ def IK(pose):
     "cal theta 3 2 sols"
     o01z = 117.75
     do01o04 = np.sqrt(x4**2+y4**2+(z4-o01z)**2) #distance o01 o04
-    # print 'd14',do01o04
+ 
    
     L2 = 98.84
     L3 = 113.1
     fix31 = (do01o04**2-L2**2-L3**2)/(2*L2*L3)
-    # print 'beforefix',fix31
+ 
     
     if fix31 > 1.0+0.0000001:
         fix31 = 1.0
@@ -203,11 +194,10 @@ def IK(pose):
         fix31 = 1.0
     t31 = np.arccos(fix31)
     t32 = -np.arccos(fix31)
-    # print "t31",t31*180/np.pi,"t32",t32*180/np.pi
-    # convert to real t31 *-1
+ 
     t31r = -np.arccos(fix31)
     t32r = +np.arccos(fix31)
-    # print "t31r",t31r*180/np.pi,"t32r",t32r*180/np.pi
+ 
 
     "cal theta 2 sol depends on theta3 2 sols"
     if np.abs(t12)>=np.abs(t11):
@@ -215,44 +205,36 @@ def IK(pose):
     else:
         t1f = t12
 
-    #theta 2 = gamma - psi
+   
     angleslink = [t1f,0,0,0,0,0]
     H01 = FK_dh(angleslink,1)[0]
-    # print 'H01',H01
     o14 = np.append (o04,[1.0])
     o14 = np.matmul(np.linalg.inv(H01),o14)
-    # print 'o14',o14
+
     gamma = np.arctan2(o14[1],o14[0]) 
-    # print "gamma",gamma*180/np.pi
+
     fixpsi = (L2**2+do01o04**2-L3**2)/(2*L2*do01o04)
-    # print "beforefixpsi",fixpsi
     if fixpsi > 1.0+0.000001:
         fixpsi = 1.0
         print "=======unreachable========3"
-        # print 'afterfixpsi',fixpsi
         IK_angle = None
         return IK_angle
     elif fixpsi <-1.0-0.000001:
         fixpsi = -1.0
         print "=======unreachable========4"
-        # print 'afterfixpsi',fixpsi
         IK_angle = None
         return IK_angle
     psi = np.arccos(fixpsi)
-    # print "psi",psi*180/np.pi
     if t31 < 0.0:
         t21 = gamma-psi #check!~
         t21r = 0.5*np.pi+t21
-        # print "t21",t21*180/np.pi,"t21r",t21r*180/np.pi
     elif t31 >= 0.0:
         t21 = gamma+psi
         t21r = 0.5*np.pi+t21
-        # print "t22",t22*180/np.pi,"t21r",t21r*180/np.pi
 
     if t32 < 0.0:
         t22 = gamma-psi #check!~
         t22r = 0.5*np.pi+t22
-        # print "t21",t21*180/np.pi,"t21r",t21r*180/np.pi
     elif t32 >= 0.0:
         t22 = gamma+psi
         t22r = 0.5*np.pi+t22
@@ -264,8 +246,6 @@ def IK(pose):
     for i in range(3):
         for j in range(3):
             R03[i][j] = H03[i][j]
-    # print "H03"
-    # print np.matmul(H03,[0,0,0,1])
     R36 = np.matmul(np.linalg.inv(R03),R)
     "ZYZ has 2 sol here, use if to chose"
     t46 = get_euler_angles_from_T(R36)[0]
@@ -275,8 +255,6 @@ def IK(pose):
     t41 = t46[0]
     t51 = t46[1]
     t61 = t46[2]
-
-    # IK_angle = [t11,t21r,t32r,t41,t51,t61]
     IK_angle = [t1f,t21r,t31r,t41,t51,t61]
     P=[0,0,0,1]
     Hq = FK_dh(IK_angle,6)[0]
@@ -290,8 +268,7 @@ def IK(pose):
     for i in range(3):
         for j in range(3):
             R032[i][j] = H032[i][j]
-    # print "H03"
-    # print np.matmul(H03,[0,0,0,1])
+
     R362 = np.matmul(np.linalg.inv(R032),R)
     "ZYZ has 2 sol here, use if to chose"
     t462 = get_euler_angles_from_T(R362)[0]
@@ -331,19 +308,7 @@ def IK(pose):
     print De
      #[[]]
     return IK_angle2
-cos=np.cos
-sin=np.sin
-# A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),200],[0,0,0,1]])
-# B = np.array([[1,0,0,174],[0,1,0,-2],[0,0,1,75],[0,0,0,1]])
-# B = Gripperpose(B,-8,-165,-10)
-# B = np.array([[1,0,0,-122],[0,1,0,-207],[0,0,1,75],[0,0,0,1]])
-# B = Gripperpose(B,-133,147,166)
 
-# # A = np.array([[cos(np.pi),0,-sin(np.pi),100],[0,1,0,100],[sin(np.pi),0,cos(np.pi),120],[0,0,0,1]])
-# IK(B)
-# aa=IK(B)
-# B=[i*180/np.pi for i in B]
-# print B
 
 def to_s_matrix(w,v):
     """
@@ -373,11 +338,7 @@ def IK2(pose):
         for j in range(3):
             R[i][j] = H[i][j]
     o=[H[i][3] for i in range(3)] # desire postion
-    # print R
-    # print o
-    # o06 =np.matmul(H,[0,0,0,1])
     o04 = o - np.matmul(R,[0,0,d6])
-    # print 'o04',o04
     x4 = o04[0]
     y4 = o04[1]
     z4 = o04[2]
@@ -386,12 +347,12 @@ def IK2(pose):
     "cal theta 3 2 sols"
     o01z = 117.75
     do01o04 = np.sqrt(x4**2+y4**2+(z4-o01z)**2) #distance o01 o04
-    # print 'd14',do01o04
+
    
     L2 = 98.84
     L3 = 113.1
     fix31 = (do01o04**2-L2**2-L3**2)/(2*L2*L3)
-    # print 'beforefix',fix31
+
     
     if fix31 > 1.0+0.0000001:
         fix31 = 1.0
@@ -409,11 +370,10 @@ def IK2(pose):
         fix31 = 1.0
     t31 = np.arccos(fix31)
     t32 = -np.arccos(fix31)
-    # print "t31",t31*180/np.pi,"t32",t32*180/np.pi
-    # convert to real t31 *-1
+
     t31r = -np.arccos(fix31)
     t32r = +np.arccos(fix31)
-    # print "t31r",t31r*180/np.pi,"t32r",t32r*180/np.pi
+
 
     "cal theta 2 sol depends on theta3 2 sols"
     if np.abs(t12)>=np.abs(t11):
@@ -421,44 +381,43 @@ def IK2(pose):
     else:
         t1f = t12
 
-    #theta 2 = gamma - psi
     angleslink = [t1f,0,0,0,0,0]
     H01 = FK_dh(angleslink,1)[0]
-    # print 'H01',H01
+
     o14 = np.append (o04,[1.0])
     o14 = np.matmul(np.linalg.inv(H01),o14)
-    # print 'o14',o14
+
     gamma = np.arctan2(o14[1],o14[0]) 
-    # print "gamma",gamma*180/np.pi
+
     fixpsi = (L2**2+do01o04**2-L3**2)/(2*L2*do01o04)
-    # print "beforefixpsi",fixpsi
+
     if fixpsi > 1.0+0.000001:
         fixpsi = 1.0
         print "=======unreachable========3"
-        # print 'afterfixpsi',fixpsi
+
         IK_angle = None
         return IK_angle
     elif fixpsi <-1.0-0.000001:
         fixpsi = -1.0
         print "=======unreachable========4"
-        # print 'afterfixpsi',fixpsi
+
         IK_angle = None
         return IK_angle
     psi = np.arccos(fixpsi)
-    # print "psi",psi*180/np.pi
+
     if t31 < 0.0:
         t21 = gamma-psi #check!~
         t21r = 0.5*np.pi+t21
-        # print "t21",t21*180/np.pi,"t21r",t21r*180/np.pi
+  
     elif t31 >= 0.0:
         t21 = gamma+psi
         t21r = 0.5*np.pi+t21
-        # print "t22",t22*180/np.pi,"t21r",t21r*180/np.pi
+
 
     if t32 < 0.0:
         t22 = gamma-psi #check!~
         t22r = 0.5*np.pi+t22
-        # print "t21",t21*180/np.pi,"t21r",t21r*180/np.pi
+
     elif t32 >= 0.0:
         t22 = gamma+psi
         t22r = 0.5*np.pi+t22
@@ -470,8 +429,7 @@ def IK2(pose):
     for i in range(3):
         for j in range(3):
             R03[i][j] = H03[i][j]
-    # print "H03"
-    # print np.matmul(H03,[0,0,0,1])
+
     R36 = np.matmul(np.linalg.inv(R03),R)
     "ZYZ has 2 sol here, use if to chose"
     t46 = get_euler_angles_from_T(R36)[0]
@@ -481,8 +439,6 @@ def IK2(pose):
     t41 = t46[0]
     t51 = t46[1]
     t61 = t46[2]
-
-    # IK_angle = [t11,t21r,t32r,t41,t51,t61]
     IK_angle = [t1f,t21r,t31r,t41,t51,t61]
     P=[0,0,0,1]
     Hq = FK_dh(IK_angle,6)[0]
@@ -496,8 +452,6 @@ def IK2(pose):
     for i in range(3):
         for j in range(3):
             R032[i][j] = H032[i][j]
-    # print "H03"
-    # print np.matmul(H03,[0,0,0,1])
     R362 = np.matmul(np.linalg.inv(R032),R)
     "ZYZ has 2 sol here, use if to chose"
     t462 = get_euler_angles_from_T(R362)[0]
@@ -516,18 +470,6 @@ def IK2(pose):
     if IK_angle2[1] > 2.22 or IK_angle2[1]<-2.22 or IK_angle[1]>2.22 or IK_angle[1]<-2.22:
         return None
 
-    
-    # for i in IK_angle:
-    #     if np.abs(i)>2.62:
-    #         print ("IK2*************************")
-    #         print ("IK2 in ",worldf)
-    #         IK_angle2 = [t1f,t22r,t32r,t42,t52,t62]
-    #         if IK_angle[5] >=3.105 or  IK_angle[5] <=-3.105:
-    #             IK_angle[5] = 0
-    #         De = [i*180/np.pi for i in IK_angle]
-    #         print De   
-    #          #[[]]
-    #         return IK_angle2
     print ("IK*************************")
     print ("IK in ",worldf2)
     De = [i*180/np.pi for i in IK_angle2]
@@ -536,5 +478,4 @@ def IK2(pose):
  
     De = [i*180/np.pi for i in IK_angle]
     print De
-     #[[]]
     return IK_angle

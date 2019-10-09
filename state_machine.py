@@ -35,6 +35,8 @@ class StateMachine():
                 self.estop()
             if(self.next_state == "task4"):
                 self.task4()
+            if(self.next_state == "click2grab"):
+                self.click2grab()
             if(self.next_state == "limp"):
                 self.current_state = "limp"
 
@@ -51,6 +53,8 @@ class StateMachine():
                 self.execute()
             if(self.next_state == "task4"):
                 self.task4()
+            if(self.next_state == "click2grab"):
+                self.click2grab()
             if(self.next_state == "limp"):
                 self.current_state = "limp"
             if (self.next_state == "teaching"):
@@ -70,6 +74,8 @@ class StateMachine():
                 self.execute()
             if(self.next_state == "task4"):
                 self.task4()
+            if(self.next_state == "click2grab"):
+                self.click2grab()
             if (self.next_state == "teaching"):
                 self.waypoints = []
                 self.teaching()
@@ -124,8 +130,15 @@ class StateMachine():
         self.current_state = "estop"
         self.rexarm.disable_torque()
         self.rexarm.get_feedback()
-    
+
     def execute(self):
+        self.status_message = "State: Executing waypoint path"
+        self.current_state = "execute"
+        self.rexarm.enable_torque()
+        self.tp.execute_plan(self.waypoints)
+        self.next_state = "idle"
+
+    def click2grab(self):
         self.status_message = "State: Running Click to Grab"
         self.current_state = "execute"
         self.rexarm.enable_torque()
@@ -139,14 +152,14 @@ class StateMachine():
         self.kinect.new_click = False
         sourcePoint = self.kinect.last_click.copy()
         x_w_src,y_w_src,z_w_src,_ = self.kinect.ijToXyz(sourcePoint[0],sourcePoint[1])
-        # x_w_src,y_w_src,z_w_src = (100, 100, 70)
+       
 
         while(not (self.kinect.new_click == True)):
             self.rexarm.get_feedback()
         self.kinect.new_click = False
         destPoint = self.kinect.last_click.copy()
         x_w_dest,y_w_dest,z_w_dest,_ = self.kinect.ijToXyz(destPoint[0],destPoint[1])
-        # x_w_dest,y_w_dest,z_w_dest = (-100, -100, 70)
+        
 
         if(z_w_dest < 50):
             z_w_dest = 50
@@ -219,21 +232,8 @@ class StateMachine():
         destPoint = None
         self.rexarm.get_feedback()
 
-        # self.kinect.new_click = False
-        # while(not (self.kinect.new_click == True)):
-        #     self.rexarm.get_feedback()  
-        # self.kinect.new_click = False
-        # sourcePoint = self.kinect.last_click.copy()
-        # x_w_src,y_w_src,z_w_src,_ = self.kinect.ijToXyz(sourcePoint[0],sourcePoint[1])
         x_w_src,y_w_src,z_w_src = (200, 200, 80)
 
-        # while(not (self.kinect.new_click == True)):
-        #     self.rexarm.get_feedback()
-        # self.kinect.new_click = False
-        # destPoint = self.kinect.last_click.copy()
-        # x_w_dest,y_w_dest,z_w_dest,_ = self.kinect.ijToXyz(destPoint[0],destPoint[1]
-        # if(z_w_dest < 50):
-        #     z_w_dest = 50
         if(z_w_src < 50):
             z_w_src = 50
         sourceA_prime = np.array([[1,0,0,x_w_src],[0,1,0,y_w_src],[0,0,1,z_w_src+80],[0,0,0,1]])
@@ -273,12 +273,9 @@ class StateMachine():
                 sourceA_next = kp.Gripperpose(sourceA,angleA-90,Y_rot_component,0)
             IK_A = kp.IK(sourceA_next)
             plan1.append(IK_A)
-            # if(IK_A is not None):
-                # self.tp.execute_plan([IK_A], max_speed = spd, look_ahead = 8)
-            # time.sleep(0.2)
+
         plan1 = np.array(plan1)
         self.tp.execute_plan(plan1, max_speed = spd, look_ahead = 8)
-        # print (plan1)
         self.rexarm.open_gripper()
         time.sleep(3.0)
         sourceA_prime = kp.FK_dh(plan1[-1],6)[0]
@@ -300,7 +297,7 @@ class StateMachine():
         print(plan)
         self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],plan[1]], max_speed = spd, look_ahead = 8)
         self.rexarm.close_gripper()
-        # time.sleep(2.0)
+
         self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
         self.rexarm.open_gripper()
         sourceB_prime = kp.FK_dh(plan[-1],6)[0]
@@ -343,8 +340,6 @@ class StateMachine():
         print(len(plan))
         plan = np.array(plan) 
         self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
-        # self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
-
 
         "Lower Left to Upper Left"
         plan = []

@@ -130,9 +130,12 @@ class Gui(QMainWindow):
         self.ui.btnUser3.clicked.connect(partial(self.sm.addPoints))
         self.ui.btnUser4.setText("Go Limp")
         self.ui.btnUser4.clicked.connect(partial(self.sm.set_next_state, "limp"))
-        
+        self.ui.btnUser5.setText("Click2Grab")
+        self.ui.btnUser5.clicked.connect(partial(self.sm.set_next_state, "click2grab"))
+
         self.ui.btn_task4.clicked.connect(partial(self.sm.set_next_state,"task4"))
-        
+    
+
         self.ui.sldrBase.valueChanged.connect(self.sliderChange)
         self.ui.sldrShoulder.valueChanged.connect(self.sliderChange)
         self.ui.sldrElbow.valueChanged.connect(self.sliderChange)
