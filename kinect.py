@@ -33,6 +33,12 @@ class Kinect():
         """ block info """
         self.block_contours = np.array([])
 
+        try:
+            self.LoadMatrices()
+            self.kinectCalibrated = True
+        except:
+            pass
+
     def captureVideoFrame(self):
         """                      
         Capture frame from Kinect, format is 24bit RGB    
@@ -195,13 +201,12 @@ class Kinect():
         return np.loadtxt("./util/intrinsic_mat.cfg")
     
     def blockDetector(self):
-        """
-        TODO:
-        Implement your block detector here.  
-        You will need to locate
-        blocks in 3D space
-        """
-        pass
+        world_xyz_data = [[self.ijToXyz(u,v) for u in range(640)]for v in range(480)]
+        hsv_img = cv2.cvtColor(self.currentVideoFrame, cv2.COLOR_RGB2HSV)
+        cubes = self.GetCubes(hsv_img, self.currentVideoFrame, world_xyz_data)
+        print("cubes!!!")
+        print(cubes)
+        return cubes
 
     def detectBlocksInDepthImage(self):
         """
@@ -210,3 +215,145 @@ class Kinect():
         in the depth image
         """
         pass
+
+    def getPixelColorLabel(self, u,v,hsv_img, rgb_img, world_xyz_data):
+        exemplarsHSV = [[89,28,105],
+                        [32,221,120],
+                        [212, 52, 101],
+                        [17, 208, 100],
+                        [231, 143, 240],
+                        [128, 0, 0],
+                        [237, 152, 82],
+                        [152, 64, 109],
+                        [215,22,183]]
+        labels=[['green'],['yellow'],['violet'],['orange'],['pink'],['black'],['red'],['blue'],['workspace']]
+        world_xyz = world_xyz_data[v][u][0:3]
+        # if the pixel is outside the workspace, return false
+        if(world_xyz[0] > 310 or world_xyz[0] < -310 or world_xyz[1] > 310 or world_xyz[1] < -310 or world_xyz[2] > 400 or world_xyz[2] < 3):
+            return ('off board', False)
+        distances = [np.linalg.norm(hsv_img[v][u] - b) for b in exemplarsHSV]
+        exemplarIndex = distances.index(min(distances))
+        # means we found an exemplar beyond our block color exemplars
+        return (labels[exemplarIndex], (exemplarIndex <= 7))
+
+    def isPixelBlockMember(self,u,v,hsv_img, world_xyz_data, colorLabels,searchLimit = 10, searchThresh = 0.5):
+        label, isBlockColorPixel = colorLabels[u][v]
+        if(not isBlockColorPixel):
+            return False
+        else:
+            numBlockColors = 0
+            numValidNeighbors = 0
+            for i in np.arange(-searchLimit, searchLimit, 1):
+                for j in np.arange(-searchLimit, searchLimit, 1):
+                    if (i == 0 and j ==0):
+                        pass
+                    u_neighbor = u + i
+                    v_neighbor = v + j
+                    if(u_neighbor > 0 and u_neighbor < 640 and v_neighbor > 0 and v_neighbor < 480):
+                        numValidNeighbors += 1
+                        if colorLabels[u_neighbor][v_neighbor][0] == label:
+                            numBlockColors += 1
+            return ((float(numBlockColors) / float(numValidNeighbors)) > searchThresh)
+        
+    def clusterCentroid(self, centroid, centroids):
+        visitationMap = np.zeros((480,640))
+        occupancyMap = np.zeros((480,640))
+        targetLabel = centroid[2][0]
+        centroid_U = centroid[0]
+        centroid_V = centroid[1]
+        clusteredCentroids = []
+        queue = []
+        queue.append(centroid)
+        while(len(queue) > 0):
+            newCentroid = queue.pop()
+            newCentroidU = newCentroid[0]
+            newCentroidV = newCentroid[1]
+            newCentroidLabel = newCentroid[2][0]
+            visitationMap[newCentroidV][newCentroidU] = 1
+            if(newCentroidLabel == targetLabel):
+                occupancyMap[newCentroidV][newCentroidU] = 1
+                clusteredCentroids.append(newCentroid)
+                for exploreU in [newCentroidU-1,newCentroidU,newCentroidU+1]:
+                    for exploreV in [newCentroidV-1,newCentroidV,newCentroidV+1]:
+                        if(visitationMap[exploreV][exploreU] == 0):
+                            for exploreCentroid in centroids:
+                                if(exploreCentroid[0] == exploreU and exploreCentroid[1] == exploreV):
+                                    queue.append(exploreCentroid)
+        return (clusteredCentroids, occupancyMap)
+
+    def IsClusterCube(self, cluster, hsv_img, world_xyz_data, crossSectionBounds = [625,4225]):
+        maxX = None
+        maxY = None
+        maxZ = None
+        minX = None
+        minY = None
+        minZ = None
+        for centroid in cluster:
+            centroidXYZ = world_xyz_data[centroid[1]][centroid[0]]
+            if(maxX is None or centroidXYZ[0] > maxX):
+                maxX = centroidXYZ[0]
+            if(maxY is None or centroidXYZ[1] > maxY):
+                maxY = centroidXYZ[1]
+            if(maxZ is None or centroidXYZ[2] > maxZ):
+                maxZ = centroidXYZ[2]
+            if(minX is None or centroidXYZ[0] < minX):
+                minX = centroidXYZ[0]
+            if(minY is None or centroidXYZ[1] < minY):
+                minY = centroidXYZ[1]
+            if(minZ is None or centroidXYZ[2] < minZ):
+                minZ = centroidXYZ[2]
+        deltaX = maxX - minX
+        deltaY = maxY - minY
+        deltaZ = maxZ - minZ
+        for BBCrossSectionArea in [deltaX * deltaY,deltaX * deltaZ,deltaY*deltaZ]:
+            if BBCrossSectionArea >= crossSectionBounds[0] and BBCrossSectionArea <= crossSectionBounds[1]:
+                return True
+        return False
+
+    def GetClusters(self, hsv_img, rgb_img, world_xyz_data):
+        colorLabels = [[self.getPixelColorLabel(u,v,hsv_img, rgb_img,world_xyz_data) for v in range(480)] for u in range(640)]
+        centroids_raw = []
+        for u in range(640):
+            for v in range(480):
+                if self.isPixelBlockMember(u,v,hsv_img,world_xyz_data,colorLabels):
+                    centroids_raw.append([u,v,self.getPixelColorLabel(u,v,hsv_img,rgb_img,world_xyz_data)])
+        claimedGrid = np.zeros((480,640))
+        clusters = []
+        for centroid in centroids_raw:
+            if(claimedGrid[centroid[1]][centroid[0]] == 0):
+                newCluster, clusterOccupancy = self.clusterCentroid(centroid, centroids_raw)
+                clusters.append(newCluster)
+                claimedGrid += clusterOccupancy
+        return clusters
+
+    def GetCubes(self,hsv_img, rgb_img, world_xyz_data, maxZSlop=3):
+        clusters = self.GetClusters(hsv_img, rgb_img, world_xyz_data)
+        cubeClusters = []
+        cubes = []
+        for cluster in clusters:
+            if self.IsClusterCube(cluster, hsv_img, world_xyz_data):
+                cubeClusters.append(cluster)
+        for cubeCluster in cubeClusters:
+            centroidXYZs = [world_xyz_data[centroid[1]][centroid[0]] for centroid in cubeCluster]
+            centroidZs = [centroidXYZ[2] for centroidXYZ in centroidXYZs]
+            maxZ = max(centroidZs)
+            clusterXYZ = None
+            nearestDist = None
+            for i in range(len(centroidXYZs)):
+                centroidXYZ = centroidXYZs[i]
+                if((centroidXYZ[2] + maxZSlop) > maxZ):
+                    zAxisDist = np.linalg.norm([centroidXYZ[0],centroidXYZ[1]])
+                    if(clusterXYZ is None or zAxisDist < nearestDist):
+                        clusterXYZ = centroidXYZ
+                        nearestDist =  zAxisDist
+                        index = i
+            cubes.append((clusterXYZ, cubeCluster[i]))
+        return cubes
+
+    def LoadMatrices(self):
+        self.cameraExtrinsic = np.loadtxt("./util/extrinsic_mat.cfg")
+        self.depth2rgb_affine = np.loadtxt("./util/depthRGBAffine.cfg")
+    
+    def SaveMatrices(self):
+        np.savetxt("./util/extrinsic_mat.cfg", self.cameraExtrinsic)
+        np.savetxt("./util/depthRGBAffine.cfg", self.depth2rgb_affine)

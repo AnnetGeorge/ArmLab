@@ -130,9 +130,11 @@ class Gui(QMainWindow):
         self.ui.btnUser3.clicked.connect(partial(self.sm.addPoints))
         self.ui.btnUser4.setText("Go Limp")
         self.ui.btnUser4.clicked.connect(partial(self.sm.set_next_state, "limp"))
-        self.ui.btnUser5.setText("Click2Grab")
-        self.ui.btnUser5.clicked.connect(partial(self.sm.set_next_state, "click2grab"))
-
+        self.ui.btnUser5.setText("Manual Run BlkDetect")
+        self.ui.btnUser5.clicked.connect(partial(self.kinect.blockDetector))
+        
+        self.ui.btn_task1.clicked.connect(partial(self.sm.set_next_state,"task1"))
+        self.ui.btn_task2.clicked.connect(partial(self.sm.set_next_state,"task2"))
         self.ui.btn_task4.clicked.connect(partial(self.sm.set_next_state,"task4"))
     
 

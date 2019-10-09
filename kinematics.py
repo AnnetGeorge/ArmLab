@@ -180,14 +180,14 @@ def IK(pose):
     
     if fix31 > 1.0+0.0000001:
         fix31 = 1.0
-        print "=======unreachable========1"
-        print 'afterfix',fix31
+        #print "=======unreachable========1"
+        #print 'afterfix',fix31
         IK_angle = None
         return IK_angle
     elif fix31 <-1.0-0.0000001:
         fix31 = -1.0
-        print "=======unreachable========2"
-        print 'afterfix',fix31
+        #print "=======unreachable========2"
+        #print 'afterfix',fix31
         IK_angle = None
         return IK_angle
     if fix31>1:
@@ -217,6 +217,7 @@ def IK(pose):
     if fixpsi > 1.0+0.000001:
         fixpsi = 1.0
         print "=======unreachable========3"
+        print 'afterfixpsi',fixpsi
         IK_angle = None
         return IK_angle
     elif fixpsi <-1.0-0.000001:
@@ -356,14 +357,14 @@ def IK2(pose):
     
     if fix31 > 1.0+0.0000001:
         fix31 = 1.0
-        print "=======unreachable========1"
-        print 'afterfix',fix31
+        #print "=======unreachable========1"
+        #print 'afterfix',fix31
         IK_angle = None
         return IK_angle
     elif fix31 <-1.0-0.0000001:
         fix31 = -1.0
-        print "=======unreachable========2"
-        print 'afterfix',fix31
+        #print "=======unreachable========2"
+        #print 'afterfix',fix31
         IK_angle = None
         return IK_angle
     if fix31>1:
