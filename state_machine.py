@@ -33,6 +33,10 @@ class StateMachine():
                 self.idle()                
             if(self.next_state == "estop"):
                 self.estop()
+            if(self.next_state == "task1"):
+                self.task1()
+            if(self.next_state == "task2"):
+                self.task2()
             if(self.next_state == "task4"):
                 self.task4()
             if(self.next_state == "limp"):
@@ -49,6 +53,10 @@ class StateMachine():
                 self.calibrate()
             if(self.next_state == "execute"):
                 self.execute()
+            if(self.next_state == "task1"):
+                self.task1()
+            if(self.next_state == "task2"):
+                self.task2()
             if(self.next_state == "task4"):
                 self.task4()
             if(self.next_state == "limp"):
@@ -68,6 +76,10 @@ class StateMachine():
                 self.calibrate()
             if(self.next_state == "execute"):
                 self.execute()
+            if(self.next_state == "task1"):
+                self.task1()
+            if(self.next_state == "task2"):
+                self.task2()
             if(self.next_state == "task4"):
                 self.task4()
             if (self.next_state == "teaching"):
@@ -103,6 +115,19 @@ class StateMachine():
                 self.execute()
             if(self.next_state == "limp"):
                 self.current_state = "limp"
+
+        if(self.current_state == "task4"):
+            if(self.next_state == "idle"):
+                self.idle()
+
+        if(self.current_state == "task1"):
+            if(self.next_state == "idle"):
+                self.idle()
+
+        if(self.current_state == "task2"):
+            if(self.next_state == "idle"):
+                self.idle()
+
                
 
     """Functions run for each state"""
@@ -211,6 +236,164 @@ class StateMachine():
         self.rexarm.get_feedback()
         self.next_state = "teaching"
 
+    def getFinalNaivePoseForXYZ(self, x, y, z):
+        pose = np.array([[1,0,0,x],[0,1,0,y],[0,0,1,z],[0,0,0,1]])
+        angle = np.arctan2(y, x)*(180/np.pi)
+        Y_rot_component = 180
+        while(kp.IK(kp.Gripperpose(pose, angle, Y_rot_component,0)) is None and Y_rot_component >= -180):
+            Y_rot_component -= 1
+        return kp.Gripperpose(pose, angle, Y_rot_component,0)
+
+    def task1Done(self, blocks):
+        maxz = 0
+        for block in blocks:
+            if block[0][0] > 0:
+                return False
+            if block[0][2] > maxz:
+                maxz = block[0][2]
+        return maxz > 90
+    
+    def moveBlockFromSrcToDst(self, src, dest):
+        x_w_src,y_w_src,z_w_src = src
+        if(z_w_src  < 50):
+            z_w_src = 50
+        sourcePosePrimed = self.getFinalNaivePoseForXYZ(x_w_src,y_w_src,z_w_src+90)
+        sourcePose = self.getFinalNaivePoseForXYZ(x_w_src,y_w_src,z_w_src)
+        destPosePrimed = self.getFinalNaivePoseForXYZ(dest[0],dest[1],dest[2]+90)
+        destPose = self.getFinalNaivePoseForXYZ(dest[0],dest[1],dest[2])
+        sourcePrimedIK = kp.IK(sourcePosePrimed)
+        sourceIK = kp.IK(sourcePose)
+        destPrimedIK = kp.IK(destPosePrimed)
+        destIK = kp.IK(destPose)
+        if(sourcePrimedIK is None):
+            print("source prime None")
+        if(sourceIK is None):
+            print("source IK None")
+        if(destPrimedIK is None):
+            print("dest prime None")
+            print destPosePrimed
+        if(destIK is None):
+            print("dest IK None")
+            print destPose
+        if(not(sourcePrimedIK is None or sourceIK is None or destPrimedIK is None or destIK is None)):
+            self.tp.execute_plan([sourcePrimedIK,sourceIK],max_speed=1.0)
+            time.sleep(.35)
+            self.rexarm.close_gripper()
+            time.sleep(.35)
+            self.tp.execute_plan([[self.rexarm.get_positions()[0],0.0,0.0,0.0,0.0,0.0],destPrimedIK,destIK],max_speed=1.0)
+            time.sleep(.35)
+            self.rexarm.open_gripper()
+            time.sleep(.35)
+            self.tp.execute_plan([destPrimedIK,[self.rexarm.get_positions()[0],0.0,0.0,0.0,0.0,0.0]],max_speed=1.0)
+
+    def task1(self):
+        self.current_state = "task1"
+        self.next_state = "idle"
+
+        self.status_message = "Performing task 1"
+        self.rexarm.enable_torque()
+        self.rexarm.get_feedback()
+
+        #send the rexarm straight up so it doens't block cubes
+        self.tp.execute_plan([[0.0,-0.2,0.0,0.0,0.0,0.0]])
+        self.rexarm.open_gripper()
+        dest = np.array([-100.0, 100, 10.0])
+        #get the list of cubes
+        cubes = self.kinect.blockDetector()
+        while(not self.task1Done(cubes)):
+            leftBlocks = []
+            rightBlocks = []
+            for cube in cubes:
+                if(cube[0][0] < 0):
+                    leftBlocks.append(cube)
+                else:
+                    rightBlocks.append(cube)
+            # find dest block if it exists
+            destBlock = None
+            for leftBlock in leftBlocks:
+                if(destBlock is None or destBlock[0][2] < leftBlock[0][2]):
+                    destBlock = leftBlock
+            # get destination from dest block
+            if(destBlock is None):
+                dest = [-160, 160, 40]
+            else:
+                dest = [destBlock[0][0]*1.00, destBlock[0][1]*1.00, destBlock[0][2]]
+
+            for leftBlock in leftBlocks:
+                if destBlock is None or not (leftBlock[0][0] == destBlock[0][0] and leftBlock[0][1] == destBlock[0][1] and leftBlock[0][2] == destBlock[0][2]):
+                    src = (leftBlock[0][0]*1.04, leftBlock[0][1]*1.04, leftBlock[0][2])
+                    dest[2] += 43
+                    dest[0] *= 0.98
+                    dest[1] *= 0.98
+                    self.moveBlockFromSrcToDst(src,dest)
+            
+            for rightBlock in rightBlocks:
+                src = (rightBlock[0][0]*1.04, rightBlock[0][1]*1.04, rightBlock[0][2])
+                dest[2] += 43
+                dest[0] *= 0.98
+                dest[1] *= 0.98
+                self.moveBlockFromSrcToDst(src,dest)
+            
+            self.tp.execute_plan([[self.rexarm.get_positions()[0],0.0,0.0,0.0,0.0,0.0]],max_speed=1.0)
+            cubes = self.kinect.blockDetector()
+
+    def task2bDone(self, blocks):
+        for block in blocks:
+            if block[0][1] > 0:
+                return False
+        return True
+
+    def task2aDone(self, blocks):
+        maxz = 55
+        for block in blocks:
+            if block[0][2] > maxz:
+                return False
+        return True
+
+    def task2(self):
+        self.current_state = "task2"
+        self.next_state = "idle"
+
+        self.status_message = "Performing task 2"
+        self.rexarm.enable_torque()
+        self.rexarm.get_feedback()
+
+        self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0]])
+        self.rexarm.open_gripper()
+
+        cubes = self.kinect.blockDetector()
+        while(not (self.task2aDone(cubes) and self.task2bDone(cubes))):
+            while(not self.task2aDone(cubes)):
+                stackedBlocks = []
+                for cube in cubes:
+                    if(cube[0][2] > 55.0):
+                        stackedBlocks.append(cube)
+                for stackedBlock in stackedBlocks:
+                    src = (stackedBlock[0][0]*1.03, stackedBlock[0][1]*1.03, stackedBlock[0][2]+5)
+                    dest = [src[0] + 80, src[1], src[2]]
+                    if dest[1] > 0:
+                        dest[1] = -dest[1]
+                    if(dest[0] > 200):
+                        dest[0] = 200
+                    self.moveBlockFromSrcToDst(src,dest)
+                self.tp.execute_plan([[self.rexarm.get_positions()[0],0.0,0.0,0.0,0.0,0.0]],max_speed=1.0)
+                self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0]],max_speed=1.0)
+                cubes = self.kinect.blockDetector()
+            
+            while(not self.task2bDone(cubes)):
+                upperBlocks = []
+                for cube in cubes:
+                    if(cube[0][1] > 0.0):
+                        upperBlocks.append(cube)
+                for upperBlock in upperBlocks:
+                    src = (upperBlock[0][0]*1.03, upperBlock[0][1]*1.03, upperBlock[0][2]+5)
+                    dest = (src[0], -src[1], src[2]+40)
+                    self.moveBlockFromSrcToDst(src,dest)
+                self.tp.execute_plan([[self.rexarm.get_positions()[0],0.0,0.0,0.0,0.0,0.0]],max_speed=1.0)
+                self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0]],max_speed=1.0)
+                cubes = self.kinect.blockDetector()
+
+
     def task4(self):
         self.current_state = "task4"
         self.next_state = "idle"
@@ -289,7 +472,7 @@ class StateMachine():
 
         plan = []
         for move in range(24):
-            sourceB = np.array([[1,0,0,x_w_src-10],[0,1,0,y_w_src-170-10*(move+1)],[0,0,1,z_w_src],[0,0,0,1]])
+            sourceB = np.array([[1,0,0,x_w_src-10],[0,1,0,y_w_src-200-10*(move+1)],[0,0,1,z_w_src],[0,0,0,1]])
             Y_rot_component=180
             while(kp.IK(kp.Gripperpose(sourceB,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
                 Y_rot_component -= 1
@@ -302,18 +485,18 @@ class StateMachine():
         self.rexarm.close_gripper()
         # time.sleep(2.0)
         self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
-        self.rexarm.open_gripper()
-        sourceB_prime = kp.FK_dh(plan[-1],6)[0]
-        P=np.array([[1,0,0,0],[0,1,0,0],[0,0,1,-70],[0,0,0,1]])
-        sourceB_prime = np.matmul(sourceB_prime,P)
-        sourceB_prime = kp.IK(sourceB_prime)
-        self.tp.execute_plan([sourceB_prime,[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
-        time.sleep(3.0)
+        # self.rexarm.open_gripper()
+        # sourceB_prime = kp.FK_dh(plan[-1],6)[0]
+        # P=np.array([[1,0,0,0],[0,1,0,0],[0,0,1,-70],[0,0,0,1]])
+        # sourceB_prime = np.matmul(sourceB_prime,P)
+        # sourceB_prime = kp.IK(sourceB_prime)
+        # self.tp.execute_plan([sourceB_prime,[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
+        # time.sleep(3.0)
 
 
         plan = []
-        for move in range(29):
-            sourceB = np.array([[1,0,0,x_w_src-10*(move+1)],[0,1,0,-y_w_src],[0,0,1,z_w_src],[0,0,0,1]])
+        for move in range(19):
+            sourceB = np.array([[1,0,0,x_w_src+10-10*(move+1)],[0,1,0,-y_w_src],[0,0,1,z_w_src],[0,0,0,1]])
             Y_rot_component=180
             while(kp.IK(kp.Gripperpose(sourceB,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
                 Y_rot_component -= 1
@@ -324,10 +507,35 @@ class StateMachine():
         print(len(plan))
         self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],plan[1]], max_speed = spd, look_ahead = 8)
         plan = np.array(plan)
+        print plan
         self.rexarm.close_gripper()
         self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
+        # self.rexarm.open_gripper()
+        # time.sleep(3.0)
+        sourceB_prime = kp.FK_dh(plan[-1],6)[0]
+        P=np.array([[1,0,0,0],[0,1,0,0],[0,0,1,50],[0,0,0,1]])
+        sourceB_prime = np.matmul(sourceB_prime,P)
+        sourceB_prime = kp.IK(sourceB_prime)
+        self.tp.execute_plan([sourceB_prime,[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
         time.sleep(3.0)
-        self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
+
+
+        plan = []
+        for move in range(10):
+            sourceB = np.array([[1,0,0,x_w_src-190-10*(move+1)],[0,1,0,-y_w_src],[0,0,1,z_w_src],[0,0,0,1]])
+            Y_rot_component=180
+            while(kp.IK(kp.Gripperpose(sourceB,angleB,Y_rot_component,0)) is None and Y_rot_component >= -180):
+                Y_rot_component -= 1
+            sourceB_next = kp.Gripperpose(sourceB,angleB,Y_rot_component,0)
+            IK_B = kp.IK(sourceB_next)
+            if (IK_B is not None):
+                plan.append(IK_B)
+        print(len(plan))
+        self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0],plan[1]], max_speed = spd, look_ahead = 8)
+        plan = np.array(plan)
+        print plan
+        self.rexarm.close_gripper()
+        self.tp.execute_plan(plan, max_speed = spd, look_ahead = 8)
 
         plan = []
         Y_rot_component=180
@@ -346,7 +554,7 @@ class StateMachine():
         # self.tp.execute_plan([[0.0,0.0,0.0,0.0,0.0,0.0]], max_speed = spd, look_ahead = 8)
 
 
-        "Lower Left to Upper Left"
+        # "Lower Left to Upper Left"
         plan = []
         Y_rot_component=180
         for move in range(14):
@@ -492,6 +700,7 @@ class StateMachine():
             self.kinect.registerExtrinsicMatrix(rot_vec, trans_vec)
             self.kinect.kinectCalibrated = True
             self.status_message = "Calibration - Completed Calibration"
+            self.kinect.SaveMatrices()
             time.sleep(1)
         else:
             self.status_message = "Calibration - failed! See terminal for error msg."        
